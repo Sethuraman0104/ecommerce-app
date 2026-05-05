@@ -1,7 +1,6 @@
 const Checkout = {
 
     cart: [],
-
     VAT: 0,
     EXTRA: 0,
 
@@ -12,88 +11,96 @@ const Checkout = {
 
     init() {
 
-    CustomerApp.requireLogin();
+        CustomerApp.requireLogin();
 
-    this.cart = JSON.parse(localStorage.getItem("cart")) || [];
+        this.cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-    if (!this.cart.length) {
-        CustomerApp.toast("Cart is empty", "error");
-        window.location.href = "index.html";
-        return;
-    }
+        if (!this.cart.length) {
+            CustomerApp.toast("Cart is empty", "error");
+            window.location.href = "index.html";
+            return;
+        }
 
-    const waitReady = CustomerApp.READY_PROMISE || Promise.resolve();
+        const waitReady = CustomerApp.READY_PROMISE || Promise.resolve();
 
-    waitReady.then(() => {
+        waitReady.then(async () => {
 
-        this.loadSettings();
-        this.renderHeader();
-        this.loadCustomer();
-        this.render();
-    });
-},
+            this.loadSettings();
+            this.renderUserBox();
 
-    /* ================= SETTINGS ================= */
-    loadSettings() {
+            // ✅ IMPORTANT FIX
+            await this.loadCustomer();
 
-        // SAFE READ (IMPORTANT FIX)
-        const settings = CustomerApp.SETTINGS || {};
-
-        this.VAT = parseFloat(settings.VATPercent ?? 0) || 0;
-        this.EXTRA = parseFloat(settings.AdditionalChargesPercent ?? 0) || 0;
+            this.render();
+        });
     },
 
-    /* ================= HEADER ================= */
-    renderHeader() {
+    /* USER */
+    renderUserBox() {
 
-        const customer = CustomerApp.CUSTOMER;
-        if (!customer) return;
+        const box = document.getElementById("userBox");
+        const c = CustomerApp.CUSTOMER;
 
-        const header = document.createElement("div");
-        header.className = "checkout-user-header";
-
-        header.innerHTML = `
-            <div class="user-box">
+        box.innerHTML = c ? `
+            <div class="user-info">
                 <i class="fa fa-user-circle"></i>
                 <div>
-                    <b>${customer.FullName || ""}</b><br>
-                    <small>${customer.Email || ""}</small>
+                    <div class="user-name">${c.FullName}</div>
+                    <div class="user-email">${c.Email}</div>
                 </div>
             </div>
-        `;
-
-        document.querySelector(".checkout-container")?.prepend(header);
+            <button class="logout-btn" onclick="CustomerApp.logout()">Logout</button>
+        ` : `<button class="btn-primary">Login</button>`;
     },
 
-    /* ================= CUSTOMER ================= */
+    loadSettings() {
+        const s = CustomerApp.SETTINGS || {};
+        this.VAT = parseFloat(s.VATPercent || 0);
+        this.EXTRA = parseFloat(s.AdditionalChargesPercent || 0);
+    },
+
+    goHome() {
+        window.location.href = "index.html";
+    },
+
+    /* ✅ FIXED CUSTOMER LOAD */
     async loadCustomer() {
 
         try {
-            const res = await CustomerApp.api("/customer-auth/me");
+
+            let res = await CustomerApp.api("/customer-auth/me");
+
+            // fallback if API fails
+            if (!res || !res.FullName) {
+                res = CustomerApp.CUSTOMER;
+            }
 
             if (!res) return;
 
-            document.getElementById("cName").value = res.FullName || "";
-            document.getElementById("cEmail").value = res.Email || "";
-            document.getElementById("cPhone").value = res.Phone || "";
-            document.getElementById("cAddress1").value = res.AddressLine1 || "";
-            document.getElementById("cAddress2").value = res.AddressLine2 || "";
-            document.getElementById("cCity").value = res.City || "";
-            document.getElementById("cState").value = res.State || "";
-            document.getElementById("cCountry").value = res.Country || "";
-            document.getElementById("cPostal").value = res.PostalCode || "";
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val || "";
+            };
 
-        } catch (err) {
-            console.log("Customer load failed", err);
+            set("cName", res.FullName);
+            set("cEmail", res.Email);
+            set("cPhone", res.Phone);
+            set("cAddress1", res.AddressLine1);
+            set("cAddress2", res.AddressLine2);
+            set("cCity", res.City);
+            set("cState", res.State);
+            set("cCountry", res.Country);
+            set("cPostal", res.PostalCode);
+
+        } catch (e) {
+            console.log("Customer load fallback used");
         }
     },
 
-    /* ================= CALCULATE ================= */
     calculate() {
 
-        this.subtotal = this.cart.reduce((a, i) => {
-            return a + (parseFloat(i.Total) || 0);
-        }, 0);
+        this.subtotal = this.cart.reduce((a, i) =>
+            a + (parseFloat(i.Total) || 0), 0);
 
         this.vatAmount = (this.subtotal * this.VAT) / 100;
         this.extraAmount = (this.subtotal * this.EXTRA) / 100;
@@ -102,70 +109,83 @@ const Checkout = {
             this.subtotal + this.vatAmount + this.extraAmount;
     },
 
-    /* ================= RENDER ================= */
+    /* ✅ TABLE DESIGN + UNIT SUPPORT */
     render() {
 
         this.calculate();
 
         const currency = CustomerApp.CURRENCY_SYMBOL;
 
-        let html = "";
+        let html = `
+            <table class="order-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty - Unit</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
 
-        // ITEMS
         this.cart.forEach(i => {
+
             html += `
-                <div class="order-item">
-                    <span>${i.Name} × ${i.Qty}</span>
-                    <b>${currency} ${(i.Total || 0).toFixed(2)}</b>
-                </div>
+                <tr>
+                    <td>${i.Name}</td>
+                    <td>${i.Qty || "-"}${i.UnitType}</td>
+                    <td>${currency} ${(i.Total || 0).toFixed(2)}</td>
+                </tr>
             `;
         });
 
-        // SUMMARY
         html += `
-            <hr>
+                </tbody>
+            </table>
 
-            <div class="summary-line">
-                <span>Subtotal</span>
-                <b>${currency} ${this.subtotal.toFixed(2)}</b>
-            </div>
+            <div class="summary-box">
+                <div class="line">
+                    <span>Subtotal</span>
+                    <b>${currency} ${this.subtotal.toFixed(2)}</b>
+                </div>
 
-            <div class="summary-line">
-                <span>VAT (${this.VAT}%)</span>
-                <b>${currency} ${this.vatAmount.toFixed(2)}</b>
-            </div>
+                <div class="line">
+                    <span>VAT (${this.VAT}%)</span>
+                    <b>${currency} ${this.vatAmount.toFixed(2)}</b>
+                </div>
 
-            <div class="summary-line">
-                <span>Additional Charges (${this.EXTRA}%)</span>
-                <b>${currency} ${this.extraAmount.toFixed(2)}</b>
-            </div>
+                <div class="line">
+                    <span>Extra (${this.EXTRA}%)</span>
+                    <b>${currency} ${this.extraAmount.toFixed(2)}</b>
+                </div>
 
-            <div class="summary-total">
-                <span>Grand Total</span>
-                <b>${currency} ${this.grandTotal.toFixed(2)}</b>
+                <div class="line total">
+                    <span>Total</span>
+                    <b>${currency} ${this.grandTotal.toFixed(2)}</b>
+                </div>
             </div>
         `;
 
         document.getElementById("orderSummary").innerHTML = html;
     },
 
-    /* ================= FORM ================= */
     getFormData() {
 
+        const g = id => document.getElementById(id).value;
+
         return {
-            FullName: document.getElementById("cName").value,
-            Email: document.getElementById("cEmail").value,
-            Phone: document.getElementById("cPhone").value,
-            AddressLine1: document.getElementById("cAddress1").value,
-            AddressLine2: document.getElementById("cAddress2").value,
-            City: document.getElementById("cCity").value,
-            State: document.getElementById("cState").value,
-            Country: document.getElementById("cCountry").value,
-            PostalCode: document.getElementById("cPostal").value
+            FullName: g("cName"),
+            Email: g("cEmail"),
+            Phone: g("cPhone"),
+            AddressLine1: g("cAddress1"),
+            AddressLine2: g("cAddress2"),
+            City: g("cCity"),
+            State: g("cState"),
+            Country: g("cCountry"),
+            PostalCode: g("cPostal")
         };
     },
 
-    /* ================= VALIDATION ================= */
     validate() {
 
         const f = this.getFormData();
@@ -178,7 +198,6 @@ const Checkout = {
         return true;
     },
 
-    /* ================= PLACE ORDER ================= */
     async placeOrder() {
 
         if (!this.validate()) return;
@@ -197,20 +216,20 @@ const Checkout = {
             const res = await CustomerApp.api("/orders/create", "POST", order);
 
             if (res.success) {
-
-                CustomerApp.toast("Order placed successfully", "success");
-
+                CustomerApp.toast("Order placed", "success");
                 localStorage.removeItem("cart");
 
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 1000);
+                setTimeout(() => location.href = "index.html", 1000);
             }
 
-        } catch (err) {
+        } catch {
             CustomerApp.toast("Order failed", "error");
         }
     }
 };
+
+function goHome() {
+    window.location.href = "index.html";
+}
 
 window.onload = () => Checkout.init();
