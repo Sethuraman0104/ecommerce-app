@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Customer Login</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:#f5f6fa;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.box{
+    width:380px;
+    background:white;
+    padding:25px;
+    border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+
+h2{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    border:1px solid #ddd;
+    border-radius:8px;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.btn-login{ background:#ffb703; }
+.btn-login:hover{ background:#fca311; }
+
+.btn-google{
+    background:#db4437;
+    color:white;
+}
+
+.switch{
+    text-align:center;
+    margin-top:10px;
+    cursor:pointer;
+    color:#555;
+}
+
+.hidden{ display:none; }
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <h2 id="title">Login</h2>
+
+    <!-- LOGIN -->
+    <div id="loginBox">
+        <input id="loginEmail" placeholder="Email">
+        <input id="loginPassword" type="password" placeholder="Password">
+
+        <button class="btn-login" onclick="login()">Login</button>
+
+        <button class="btn-google" onclick="googleLogin()">
+            <i class="fa fa-google"></i> Login with Google
+        </button>
+
+        <div class="switch" onclick="toggle()">Create new account</div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerBox" class="hidden">
+
+        <input id="rName" placeholder="Full Name">
+        <input id="rEmail" placeholder="Email">
+        <input id="rPassword" type="password" placeholder="Password">
+
+        <button class="btn-login" onclick="register()">Register</button>
+
+        <div class="switch" onclick="toggle()">Already have account?</div>
+    </div>
+
+</div>
+
+<script src="assets/js/customer-common.js"></script>
+
+<script>
+function toggle(){
+    document.getElementById("loginBox").classList.toggle("hidden");
+    document.getElementById("registerBox").classList.toggle("hidden");
+
+    document.getElementById("title").innerText =
+        document.getElementById("loginBox").classList.contains("hidden")
+        ? "Register"
+        : "Login";
+}
+
+/* ================= LOGIN ================= */
+async function login(){
+
+    const email = loginEmail.value;
+    const password = loginPassword.value;
+
+    const res = await CustomerApp.api("/customer-auth/login", "POST", {
+        email,
+        password
+    });
+
+    if(res.token){
+        CustomerApp.setAuth(res.token, res.customer);
+
+        redirectAfterLogin();
+    } else {
+        alert(res.message || "Login failed");
+    }
+}
+
+/* ================= REGISTER ================= */
+async function register(){
+
+    const res = await CustomerApp.api("/customer-auth/register", "POST", {
+        name: rName.value,
+        email: rEmail.value,
+        password: rPassword.value
+    });
+
+    alert(res.message || "Registered successfully");
+
+    toggle();
+}
+
+/* ================= GOOGLE ================= */
+function googleLogin(){
+    window.location.href =
+        "http://localhost:5000/api/customer-auth/google";
+}
+
+/* ================= REDIRECT ================= */
+function redirectAfterLogin(){
+
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+
+    if(redirect){
+        window.location.href = redirect;
+    } else {
+        window.location.href = "index.html";
+    }
+}
+
+CustomerApp.init();
+</script>
+
+</body>
+</html>

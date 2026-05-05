@@ -1,0 +1,559 @@
+/* RESET */
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Segoe UI;
+}
+
+body{
+  height:100vh;
+  overflow:hidden;
+}
+
+/* ================= BACKGROUND ================= */
+.bg{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 10% 20%, #2563eb, transparent 35%),
+    radial-gradient(circle at 90% 80%, #00d4ff, transparent 40%),
+    linear-gradient(120deg,#0f172a,#1e3a8a,#0ea5e9);
+
+  background-size:200% 200%;
+  animation: move 12s infinite alternate;
+  z-index:-3;
+}
+
+@keyframes move{
+  0%{background-position:0% 50%}
+  100%{background-position:100% 50%}
+}
+
+/* ================= WRAPPER ================= */
+.wrapper{
+  display:flex;
+  height:100%;
+}
+
+/* ================= LEFT ================= */
+.left{
+  flex:1;
+  position:relative;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:white;
+  overflow:hidden;
+}
+
+/* ===== TOP BAR (Browser Style) ===== */
+.top-bar{
+  position:absolute;
+  top:20px;
+  left:20px;
+  right:20px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  padding:10px 15px;
+  border-radius:12px;
+
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(15px);
+
+  color:white;
+  font-size:14px;
+}
+
+.top-bar i{
+  margin-right:8px;
+  color:#00d4ff;
+}
+
+/* fake window dots */
+.dots span{
+  width:8px;
+  height:8px;
+  display:inline-block;
+  border-radius:50%;
+  margin-left:5px;
+  background:#00d4ff;
+  opacity:0.6;
+}
+
+/* ================= PATTERN OVERLAY ================= */
+.pattern{
+  position:absolute;
+  inset:0;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size:20px 20px;
+  opacity:0.4;
+}
+
+/* ================= FLOATING ORBS ================= */
+.glass-orb{
+  position:absolute;
+  width:220px;
+  height:220px;
+  background:rgba(255,255,255,0.08);
+  filter:blur(90px);
+  border-radius:50%;
+  animation: float 7s infinite alternate;
+}
+
+.orb1{top:10%;left:10%}
+.orb2{bottom:10%;right:10%}
+
+@keyframes float{
+  from{transform:translateY(0)}
+  to{transform:translateY(60px)}
+}
+
+/* ================= BRAND ================= */
+.brand{
+  text-align:center;
+  z-index:2;
+}
+
+.logo img{
+  width:110px;
+  border-radius:50%;
+  background:white;
+  padding:10px;
+  box-shadow:0 0 40px rgba(0,212,255,0.4);
+}
+
+.brand h1{
+  margin-top:20px;
+  font-size:34px;
+}
+
+/* ================= RIGHT ================= */
+.right{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.card{
+  width:380px;
+  padding:40px;
+
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(25px);
+
+  border-radius:20px;
+  color:white;
+
+  box-shadow:0 30px 80px rgba(0,0,0,0.5);
+}
+
+/* ================= INPUT ================= */
+.field{
+  position:relative;
+  margin:25px 0;
+}
+
+.field input{
+  width:100%;
+  padding:14px 40px;
+  border-radius:10px;
+
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.2);
+  color:white;
+  outline:none;
+}
+
+.field label{
+  position:absolute;
+  left:40px;
+  top:50%;
+  transform:translateY(-50%);
+  opacity:0.6;
+  transition:0.3s;
+}
+
+.field i.fa-envelope,
+.field i.fa-lock{
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  opacity:0.6;
+}
+
+.toggle{
+  position:absolute;
+  right:12px;
+  top:50%;
+  cursor:pointer;
+}
+
+/* FLOAT LABEL */
+.field input:focus + label,
+.field input:not(:placeholder-shown) + label{
+  top:-8px;
+  font-size:11px;
+  color:#00d4ff;
+}
+
+/* ================= BUTTON ================= */
+.btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+
+  background:linear-gradient(90deg,#00d4ff,#2563eb);
+  color:white;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.btn:hover{
+  transform:translateY(-2px);
+}
+
+/* FOOTER */
+.footer{
+  text-align:center;
+  margin-top:15px;
+}
+
+.footer a{
+  color:#00d4ff;
+  text-decoration:none;
+}
+
+/* FOOTER BAR */
+.footer-bar{
+  position:fixed;
+  bottom:10px;
+  width:100%;
+  text-align:center;
+  color:white;
+  opacity:0.6;
+}
+
+/* FLOATING ECOMMERCE ICONS */
+.particles i{
+  position:absolute;
+  font-size:20px;
+  color:rgba(255,255,255,0.15);
+  animation: floatIcon 10s linear infinite;
+}
+
+.particles i:nth-child(1){top:10%;left:20%}
+.particles i:nth-child(2){top:70%;left:10%}
+.particles i:nth-child(3){top:30%;right:15%}
+.particles i:nth-child(4){bottom:20%;right:25%}
+.particles i:nth-child(5){top:50%;left:50%}
+
+@keyframes floatIcon{
+  0%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-40px) rotate(180deg)}
+  100%{transform:translateY(0) rotate(360deg)}
+}
+
+/* ================= MODAL (unchanged but compatible) ================= */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(10px);
+}
+
+.modal-box{
+  width:360px;
+  padding:30px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(25px);
+  color:white;
+  position:relative;
+}
+
+.modal-glow{
+  position:absolute;
+  inset:-2px;
+  background:linear-gradient(45deg,#00d4ff,#3b82f6,#8b5cf6);
+  filter:blur(25px);
+  z-index:-1;
+  border-radius:20px;
+}
+
+/* MOBILE */
+@media(max-width:900px){
+  .left{display:none;}
+}
+
+/* ================= MODAL OVERLAY ================= */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  display:none;
+  justify-content:center;
+  align-items:center;
+
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(10px);
+
+  z-index:999;
+  animation: fadeIn 0.3s ease;
+}
+
+/* ================= MODAL BOX ================= */
+.modal-box{
+  position:relative;
+  width:360px;
+  padding:30px;
+
+  border-radius:20px;
+
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(25px);
+
+  box-shadow:0 30px 80px rgba(0,0,0,0.6);
+
+  color:white;
+  text-align:center;
+
+  animation: popIn 0.35s ease;
+  overflow:hidden;
+}
+
+/* glowing border effect */
+.modal-glow{
+  position:absolute;
+  inset:-2px;
+  border-radius:20px;
+  background:linear-gradient(45deg,#00d4ff,#3b82f6,#8b5cf6,#00d4ff);
+  filter:blur(25px);
+  opacity:0.25;
+  z-index:-1;
+}
+
+/* title */
+.modal-box h3{
+  font-size:22px;
+  margin-bottom:8px;
+}
+
+.modal-box p{
+  font-size:13px;
+  opacity:0.7;
+  margin-bottom:20px;
+}
+
+/* ================= INPUT ================= */
+.modal-input{
+  position:relative;
+  margin:20px 0;
+}
+
+.modal-input i{
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  opacity:0.6;
+}
+
+.modal-input input{
+  width:100%;
+  padding:12px 12px 12px 38px;
+
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.2);
+
+  background:rgba(255,255,255,0.05);
+  color:white;
+
+  outline:none;
+  transition:0.3s;
+}
+
+.modal-input input:focus{
+  border-color:#00d4ff;
+  box-shadow:0 0 10px rgba(0,212,255,0.4);
+}
+
+/* ================= BUTTONS ================= */
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  margin-top:15px;
+}
+
+.btn-send{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+
+  background:linear-gradient(90deg,#00d4ff,#2563eb);
+  color:white;
+
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.btn-send:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 20px rgba(0,212,255,0.3);
+}
+
+.btn-close{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+
+  background:rgba(255,255,255,0.1);
+  color:white;
+
+  cursor:pointer;
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes popIn{
+  from{
+    transform:scale(0.85);
+    opacity:0;
+  }
+  to{
+    transform:scale(1);
+    opacity:1;
+  }
+}
+
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+/* ================= MOBILE ================= */
+@media(max-width:500px){
+  .modal-box{
+    width:90%;
+    padding:25px;
+  }
+}
+
+/* ================= TOAST CONTAINER ================= */
+.toast-container{
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ================= TOAST ================= */
+.toast{
+  min-width: 280px;
+  max-width: 320px;
+  padding: 14px 16px;
+  border-radius: 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  color: white;
+
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255,255,255,0.15);
+
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+
+  position: relative;
+  overflow: hidden;
+
+  animation: slideIn 0.4s ease forwards;
+}
+
+/* ICON */
+.toast i{
+  font-size: 18px;
+}
+
+/* TEXT */
+.toast .msg-text{
+  flex: 1;
+  font-size: 14px;
+}
+
+/* CLOSE */
+.toast .close{
+  cursor: pointer;
+  opacity: 0.6;
+  transition: 0.2s;
+}
+.toast .close:hover{
+  opacity: 1;
+}
+
+/* TYPES */
+.toast.success{
+  border-left: 4px solid #22c55e;
+}
+.toast.error{
+  border-left: 4px solid #ef4444;
+}
+.toast.info{
+  border-left: 4px solid #00d4ff;
+}
+.toast.warning{
+  border-left: 4px solid #f59e0b;
+}
+
+/* PROGRESS BAR */
+.toast::after{
+  content:"";
+  position:absolute;
+  bottom:0;
+  left:0;
+  height:3px;
+  width:100%;
+  background:rgba(255,255,255,0.2);
+  animation: progress 3s linear forwards;
+}
+
+/* ANIMATIONS */
+@keyframes slideIn{
+  from{
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to{
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut{
+  to{
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+@keyframes progress{
+  from{ width:100%; }
+  to{ width:0%; }
+}

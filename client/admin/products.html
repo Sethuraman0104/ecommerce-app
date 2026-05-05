@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Products - E-Shop Admin</title>
+
+  <link rel="stylesheet" href="../assets/css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="brand-card">
+
+  <div class="brand-glow"></div>
+
+  <div class="brand-content">
+
+    <div class="brand-logo">
+      <img id="companyLogo" src="../assets/logo.png">
+    </div>
+
+    <div class="brand-info">
+      <h2 id="companyName">E-Shop</h2>
+      <small>Admin Control Center</small>
+    </div>
+
+  </div>
+
+</div>
+
+    <a href="/admin/dashboard.html"><i class="fa fa-home"></i> Dashboard</a>
+<a href="/admin/products.html" class="active"><i class="fa fa-box"></i> Products</a>
+<a href="/admin/orders.html"><i class="fa fa-file-invoice"></i> Orders</a>
+<a href="/admin/customers.html"><i class="fa fa-users"></i> Customers</a>
+<a href="/admin/payments.html"><i class="fa fa-credit-card"></i> Payments</a>
+<a href="/admin/coupons.html"><i class="fa fa-tag"></i> Coupons</a>
+<a href="/admin/reports.html"><i class="fa fa-chart-bar"></i> Reports</a>
+<a href="/admin/settings.html"><i class="fa fa-cog"></i> Settings</a>
+<a href="/admin/company.html"><i class="fa fa-building"></i> Company</a>
+    <button onclick="logout()" class="logout-btn">
+      <i class="fa fa-sign-out-alt"></i> Logout
+    </button>
+
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR (MATCH DASHBOARD STYLE) -->
+    <div class="topbar">
+
+      <div class="page-title">
+        <i class="fa fa-box"></i>
+        <h1>Products</h1>
+      </div>
+
+      <div class="top-right">
+
+        <div class="user-card" onclick="App.goToProfile()">
+
+          <img id="userPhoto" src="../assets/user.png" class="user-avatar">
+
+          <div class="user-info">
+
+            <div class="user-name" id="userName">Admin</div>
+
+            <div class="user-role" id="userRole">Admin</div>
+
+            <div class="user-login" id="lastLogin">Last login: -</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- FILTER PANEL -->
+    <div class="filter-panel">
+
+      <div class="panel-title">
+        <i class="fa fa-sliders"></i> Filters & Actions
+      </div>
+
+      <div class="panel-content">
+
+        <div class="search-box">
+          <i class="fa fa-search"></i>
+          <input id="searchBox" placeholder="Search products..." onkeyup="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <select id="filterCategory" onchange="applyFilters()"></select>
+        </div>
+
+        <div class="action-right">
+          <button class="btn add-btn" onclick="openProductModal()">
+            <i class="fa fa-plus"></i> Add Product
+          </button>
+
+          <button class="btn category-btn" onclick="openCategoryModal()">
+            <i class="fa fa-layer-group"></i> Categories
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="category-section" id="productGrid"></div>
+
+    <!-- FOOTER -->
+    <div class="footer" id="appFooter"></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<!-- <div id="productModal" class="modal">
+  <div class="modal-content">
+
+    <div class="modal-header">
+      <h2>Product Details</h2>
+      <button onclick="closeModal()">✖</button>
+    </div>
+
+    <div class="form-grid">
+
+      <input id="name" placeholder="Product Name">
+      <select id="category"></select>
+
+      <input id="price" type="number" placeholder="Price">
+      <input id="stock" type="number" placeholder="Stock">
+
+      <textarea id="description" placeholder="Description"></textarea>
+      <input id="barcode" placeholder="Barcode">
+
+      <input type="file" id="image" accept="image/*">
+
+      <label>
+        <input type="checkbox" id="isActive" checked> Active
+      </label>
+
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn primary" onclick="saveProduct()">Save Product</button>
+    </div>
+
+  </div>
+</div> -->
+
+<div id="productModal" class="modal-overlay">
+
+  <div class="modal-box product-modal">
+    <div class="modal-glow"></div>
+
+    <!-- HEADER -->
+    <div class="modal-header">
+      <h3>🛒 Product Details</h3>
+      <button class="close-btn" onclick="closeModal()">✖</button>
+    </div>
+
+    <!-- FORM -->
+    <div class="form-grid">
+
+      <div class="modal-input">
+        <input id="name" placeholder="Product Name">
+      </div>
+
+      <div class="modal-input">
+        <select id="category"></select>
+      </div>
+
+      <div class="modal-input">
+  <select id="unitType">
+    <option value="">Select Unit</option>
+    <option value="pcs">Pieces</option>
+    <option value="kg">Kilogram</option>
+    <option value="g">Gram</option>
+    <option value="ltr">Liter</option>
+    <option value="ml">Milliliter</option>
+    <option value="box">Box</option>
+  </select>
+</div>
+
+      <div class="modal-input">
+        <input id="price" type="number" placeholder="Price">
+      </div>
+
+      <div class="modal-input">
+        <input id="stock" type="number" placeholder="Stock">
+      </div>
+
+      <div class="modal-input full">
+        <textarea id="description" placeholder="Description"></textarea>
+      </div>
+
+      <div class="modal-input">
+        <input id="barcode" placeholder="Barcode">
+      </div>
+
+      <div class="modal-input file">
+        <input type="file" id="image" accept="image/*">
+      </div>
+
+      <div class="checkbox-wrap full">
+        <label>
+          <input type="checkbox" id="isActive" checked>
+          <span>Active Product</span>
+        </label>
+      </div>
+
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="modal-actions">
+      <button class="btn-send" onclick="saveProduct()">💾 Save</button>
+      <button class="btn-close" onclick="closeModal()">Cancel</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- CATEGORY MODAL -->
+<div id="categoryModal" class="modal">
+  <div class="modal-content category-modal">
+
+    <!-- HEADER -->
+    <div class="modal-header">
+      <div>
+        <h2>📂 Categories</h2>
+        <small>Manage product categories</small>
+      </div>
+      <button onclick="closeCategoryModal()">✖</button>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="category-search">
+      <i class="fa fa-search"></i>
+      <input id="categorySearch" placeholder="Search categories..." onkeyup="filterCategories()">
+    </div>
+
+    <!-- LIST -->
+    <div id="categoryGrid" class="category-list"></div>
+
+    <!-- ADD NEW -->
+    <div class="category-footer">
+      <input id="newCategory" placeholder="New category name">
+      <button class="btn primary" onclick="addCategory()">
+        <i class="fa fa-plus"></i> Add
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/products.js"></script>
+
+<script>
+    App.init();
+    Products.init();
+</script>
+</body>
+</html>

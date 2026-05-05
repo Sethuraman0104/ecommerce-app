@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Payments</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="../assets/css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body onload="App.init(); Payments.init();">
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="brand-card">
+      <div class="brand-glow"></div>
+      <div class="brand-content">
+        <div class="brand-logo">
+          <img id="companyLogo" src="../assets/logo.png">
+        </div>
+        <div class="brand-info">
+          <h2 id="companyName">E-Shop</h2>
+          <small>Admin Control Center</small>
+        </div>
+      </div>
+    </div>
+
+    <a href="/admin/dashboard.html"><i class="fa fa-home"></i> Dashboard</a>
+<a href="/admin/products.html"><i class="fa fa-box"></i> Products</a>
+<a href="/admin/orders.html"><i class="fa fa-file-invoice"></i> Orders</a>
+<a href="/admin/customers.html"><i class="fa fa-users"></i> Customers</a>
+<a href="/admin/payments.html" class="active"><i class="fa fa-credit-card"></i> Payments</a>
+<a href="/admin/coupons.html"><i class="fa fa-tag"></i> Coupons</a>
+<a href="/admin/reports.html"><i class="fa fa-chart-bar"></i> Reports</a>
+<a href="/admin/settings.html"><i class="fa fa-cog"></i> Settings</a>
+<a href="/admin/company.html"><i class="fa fa-building"></i> Company</a>
+
+    <button onclick="App.logout()" class="logout-btn">
+      <i class="fa fa-sign-out-alt"></i> Logout
+    </button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="page-title">
+        <i class="fa fa-credit-card"></i>
+        <h1>Payments</h1>
+      </div>
+
+      <div class="top-right">
+
+                    <div class="user-card" onclick="App.goToProfile()">
+                        <img id="userPhoto" src="../assets/user.png" class="user-avatar">
+
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Admin</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                            <div class="user-login" id="lastLogin">Last login: -</div>
+                        </div>
+                    </div>
+
+                </div>
+    </div>
+
+    <!-- PAGE -->
+    <div class="ord-page-wrapper">
+
+      <div class="ord-card">
+
+        <h2 class="ord-title">
+          <i class="fa fa-list"></i> Payments Management
+        </h2>
+
+        <!-- FILTERS -->
+        <div class="ord-filters">
+
+          <div class="ord-search">
+            <i class="fa fa-search"></i>
+            <input id="searchBox" placeholder="Search payment / order...">
+          </div>
+
+          <select id="statusFilter" class="ord-select">
+            <option value="">All Status</option>
+            <option>Paid</option>
+            <option>Pending</option>
+            <option>Failed</option>
+            <option>Refunded</option>
+          </select>
+
+          <select id="methodFilter" class="ord-select">
+            <option value="">All Methods</option>
+            <option>Card</option>
+            <option>Cash</option>
+            <option>Benefit</option>
+            <option>PayPal</option>
+          </select>
+
+        </div>
+
+        <!-- TABLE -->
+        <div class="ord-table-wrap">
+
+          <table class="ord-table">
+
+            <thead>
+              <tr>
+                <th>Payment</th>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Status</th>
+                <th>Transaction</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody id="paymentTable"></tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </div>
+<div class="footer" id="appFooter"></div>
+  </div>
+
+  
+
+</div>
+
+<!-- UPDATE STATUS MODAL -->
+<div id="paymentModal" class="ord-modal">
+
+  <div class="ord-modal-box" style="width:500px">
+
+    <div class="ord-modal-header">
+      <h2>Update Payment</h2>
+      <button class="ord-close-btn" onclick="Payments.closeModal()">X</button>
+    </div>
+
+    <div style="padding:15px">
+
+      <input type="hidden" id="payId">
+
+      <label>Status</label>
+      <select id="payStatus" class="ord-select" style="width:100%">
+        <option>Paid</option>
+        <option>Pending</option>
+        <option>Failed</option>
+        <option>Refunded</option>
+      </select>
+
+      <label style="margin-top:10px">Remarks *</label>
+      <textarea id="payRemarks" style="width:100%"></textarea>
+
+      <h3 style="margin-top:15px">History</h3>
+      <div id="payHistory" style="max-height:150px; overflow:auto;"></div>
+
+    </div>
+
+    <div class="ord-modal-actions">
+      <button onclick="Payments.saveStatus()">Save</button>
+      <button onclick="Payments.closeModal()">Close</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/payments.js"></script>
+
+</body>
+</html>

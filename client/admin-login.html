@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<title id="pageTitle">Loading...</title>
+
+<link id="appFavicon" rel="icon" href="assets/logo.png">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/auth.css">
+</head>
+
+<body onload="loadAppInfo()">
+
+<!-- BACKGROUND -->
+<div class="bg"></div>
+
+<!-- FLOATING ECOMMERCE PARTICLES -->
+<div class="particles">
+  <i class="fa fa-shopping-cart"></i>
+  <i class="fa fa-box"></i>
+  <i class="fa fa-truck"></i>
+  <i class="fa fa-bag-shopping"></i>
+  <i class="fa fa-credit-card"></i>
+  <i class="fa fa-shopping-cart"></i>
+  <i class="fa fa-box"></i>
+  <i class="fa fa-truck"></i>
+  <i class="fa fa-bag-shopping"></i>
+  <i class="fa fa-credit-card"></i>
+</div>
+
+<div class="wrapper">
+
+  <!-- LEFT -->
+  <div class="left">
+
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="left-title">
+        <i class="fa fa-store"></i>
+        <span id="browserTitle">Company - eCommerce</span>
+      </div>
+
+      <div class="dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="pattern"></div>
+
+    <div class="glass-orb orb1"></div>
+    <div class="glass-orb orb2"></div>
+
+    <div class="brand">
+      <div class="logo">
+        <img id="brandLogo" src="assets/logo.png">
+      </div>
+
+      <h1 id="brandName">Loading...</h1>
+      <p id="appTitle">Smart Business System</p>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <div class="card">
+
+      <div id="msgBox"></div>
+
+      <h2>Welcome Back</h2>
+      <p>Login to your account</p>
+
+      <form id="loginForm">
+
+        <div class="field">
+          <i class="fa fa-envelope"></i>
+          <input type="email" id="email" placeholder=" " required>
+          <label>Email Address</label>
+        </div>
+
+        <div class="field">
+          <i class="fa fa-lock"></i>
+          <input type="password" id="password" placeholder=" " required>
+          <label>Password</label>
+          <i class="fa fa-eye toggle" onclick="togglePass()"></i>
+        </div>
+
+        <button class="btn">Sign In</button>
+
+        <div class="footer">
+          <a href="#" id="forgotLink">Forgot Password?</a>
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer-bar" id="appFooter"></div>
+
+<!-- MODAL -->
+<div id="forgotModal" class="modal-overlay">
+
+  <div class="modal-box">
+
+    <div class="modal-glow"></div>
+
+    <h3>Reset Password</h3>
+    <p>Enter your email to receive reset link</p>
+
+    <div class="modal-input">
+      <i class="fa fa-envelope"></i>
+      <input type="email" id="forgotEmail" placeholder="Enter email">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-send" onclick="sendReset()">Send</button>
+      <button class="btn-close" onclick="closeModal()">Cancel</button>
+    </div>
+
+  </div>
+
+</div>
+<div id="toastContainer" class="toast-container"></div>
+<script src="assets/js/admin-login.js"></script>
+</body>
+</html>

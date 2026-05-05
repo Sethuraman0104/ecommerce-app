@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Customers</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body onload="App.init(); Customers.init();">
+
+    <div class="layout">
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+
+            <div class="brand-card">
+                <div class="brand-glow"></div>
+                <div class="brand-content">
+                    <div class="brand-logo">
+                        <img id="companyLogo" src="../assets/logo.png">
+                    </div>
+
+                    <div class="brand-info">
+                        <h2 id="companyName">E-Shop</h2>
+                        <small>Admin Control Center</small>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/admin/dashboard.html"><i class="fa fa-home"></i> Dashboard</a>
+<a href="/admin/products.html"><i class="fa fa-box"></i> Products</a>
+<a href="/admin/orders.html"><i class="fa fa-file-invoice"></i> Orders</a>
+<a href="/admin/customers.html" class="active"><i class="fa fa-users"></i> Customers</a>
+<a href="/admin/payments.html"><i class="fa fa-credit-card"></i> Payments</a>
+<a href="/admin/coupons.html"><i class="fa fa-tag"></i> Coupons</a>
+<a href="/admin/reports.html"><i class="fa fa-chart-bar"></i> Reports</a>
+<a href="/admin/settings.html"><i class="fa fa-cog"></i> Settings</a>
+<a href="/admin/company.html"><i class="fa fa-building"></i> Company</a>
+
+
+            <button onclick="App.logout()" class="logout-btn">
+                <i class="fa fa-sign-out-alt"></i> Logout
+            </button>
+
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+
+            <!-- TOPBAR (same as Orders) -->
+            <div class="topbar">
+
+                <div class="page-title">
+                    <i class="fa fa-users"></i>
+                    <h1>Customers</h1>
+                </div>
+
+                <div class="top-right">
+
+                    <div class="user-card" onclick="App.goToProfile()">
+                        <img id="userPhoto" src="../assets/user.png" class="user-avatar">
+
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Admin</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                            <div class="user-login" id="lastLogin">Last login: -</div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- PAGE WRAPPER -->
+            <div class="ord-page-wrapper">
+
+                <div class="ord-card">
+
+                    <!-- TITLE -->
+                    <h2 class="ord-title">
+                        <i class="fa fa-users"></i> Customer Management
+                    </h2>
+
+                    <!-- FILTERS (same style as Orders) -->
+                    <div class="ord-filters">
+
+                        <div class="ord-search">
+                            <i class="fa fa-search"></i>
+                            <input id="searchBox" placeholder="Search customer..." oninput="Customers.render()">
+                        </div>
+
+                        <button class="cust-btn-add" onclick="Customers.openModal()">
+                            <i class="fa fa-plus"></i> Add Customer
+                        </button>
+                    </div>
+                    <!-- TABLE -->
+                    <div class="ord-table-wrap">
+
+                        <table class="ord-table">
+
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>City</th>
+                                    <th>Country</th>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="customerTable"></tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="footer" id="appFooter"></div>
+
+        </div>
+
+    </div>
+
+    <!-- =========================
+     MODAL (ORD STYLE)
+========================= -->
+    <div id="custModal" class="ord-modal">
+
+        <div class="ord-modal-box">
+
+            <div class="ord-modal-header">
+                <div>
+                    <h2 id="modalTitle">Add Customer</h2>
+                    <small>Fill required fields</small>
+                </div>
+
+                <button class="ord-close-btn" onclick="Customers.closeModal()">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+
+            <div class="ord-modal-body">
+
+                <input type="hidden" id="customerId">
+
+                <div class="ord-grid">
+
+                    <input id="fullName" placeholder="Full Name *">
+                    <input id="email" placeholder="Email *">
+                    <input id="phone" placeholder="Phone *">
+
+                    <input id="city" placeholder="City *">
+                    <input id="state" placeholder="State *">
+                    <input id="country" placeholder="Country *">
+
+                    <input id="postalCode" placeholder="Postal Code *">
+
+                    <textarea id="address1" placeholder="Address Line 1 *"></textarea>
+                    <textarea id="address2" placeholder="Address Line 2 (Optional)"></textarea>
+
+                </div>
+
+            </div>
+
+            <div class="ord-modal-actions">
+
+                <button class="btnx-icon btnx-glass" onclick="Customers.clearForm()">
+                    Reset
+                </button>
+
+                <button class="btnx-icon btnx-success" onclick="Customers.save()">
+                    Save Customer
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="../assets/js/common.js"></script>
+    <script src="../assets/js/customers.js"></script>
+
+</body>
+
+</html>
