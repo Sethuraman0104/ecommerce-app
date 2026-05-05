@@ -1,0 +1,418 @@
+CREATE DATABASE ECommerceDB;
+GO
+USE ECommerceDB;
+
+CREATE TABLE Roles (
+    RoleID INT PRIMARY KEY IDENTITY,
+    RoleName NVARCHAR(50)
+);
+
+INSERT INTO Roles (RoleName) VALUES ('Admin'), ('Customer');
+
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(100),
+    Email NVARCHAR(150) UNIQUE,
+    PasswordHash NVARCHAR(MAX),
+    RoleID INT,
+    IsActive BIT DEFAULT 1,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
+);
+
+CREATE TABLE Categories (
+    CategoryID INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(100),
+    ParentID INT NULL
+);
+
+CREATE TABLE Products (
+    ProductID INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(200),
+    Description NVARCHAR(MAX),
+    Price DECIMAL(10,2),
+    Stock INT,
+    CategoryID INT,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID)
+);
+
+CREATE TABLE ProductImages (
+    ImageID INT PRIMARY KEY IDENTITY,
+    ProductID INT,
+    ImageUrl NVARCHAR(255),
+    FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+);
+
+CREATE TABLE Cart (
+    CartID INT PRIMARY KEY IDENTITY,
+    UserID INT NULL,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE CartItems (
+    CartItemID INT PRIMARY KEY IDENTITY,
+    CartID INT,
+    ProductID INT,
+    Quantity INT,
+    FOREIGN KEY (CartID) REFERENCES Cart(CartID),
+    FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+);
+
+CREATE TABLE Orders (
+    OrderID INT PRIMARY KEY IDENTITY,
+    UserID INT,
+    TotalAmount DECIMAL(10,2),
+    Status NVARCHAR(50) DEFAULT 'Pending',
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+CREATE TABLE OrderItems (
+    OrderItemID INT PRIMARY KEY IDENTITY,
+    OrderID INT,
+    ProductID INT,
+    Quantity INT,
+    Price DECIMAL(10,2),
+    FOREIGN KEY (OrderID) REFERENCES Orders(OrderID),
+    FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+);
+
+
+CREATE TABLE Payments (
+    PaymentID INT PRIMARY KEY IDENTITY,
+    OrderID INT,
+    PaymentMethod NVARCHAR(50),
+    PaymentStatus NVARCHAR(50),
+    TransactionID NVARCHAR(255),
+    PaidAt DATETIME,
+    FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+);
+
+CREATE TABLE Coupons (
+    CouponID INT PRIMARY KEY IDENTITY,
+    Code NVARCHAR(50),
+    DiscountPercent INT,
+    ExpiryDate DATETIME,
+    IsActive BIT DEFAULT 1
+);
+
+CREATE TABLE AuditLogs (
+    LogID INT PRIMARY KEY IDENTITY,
+    Action NVARCHAR(200),
+    UserID INT,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+
+CREATE TABLE PasswordResetTokens (
+    TokenID INT PRIMARY KEY IDENTITY,
+    UserID INT,
+    Token NVARCHAR(255),
+    Expiry DATETIME,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+
+ALTER TABLE Users
+ADD Username NVARCHAR(100);
+
+CREATE UNIQUE INDEX IX_Users_Username
+ON Users(Username);
+
+INSERT INTO Users (Name, Username, Email, PasswordHash, RoleID, IsActive)
+VALUES (
+    'Admin User',
+    'admin',
+    'admin@demo.com',
+    '$2b$10$uxdf4nqCCIVOks.d9plOBOx0TLewhiEM7J6qyNbUsfFH6luTEGF6C', -- placeholder (we fix below)
+    1,
+    1
+);
+
+INSERT INTO Users (Name, Username, Email, PasswordHash, RoleID, IsActive)
+VALUES (
+    'Test User',
+    'user1',
+    'user@demo.com',
+    '$2b$10$uxdf4nqCCIVOks.d9plOBOx0TLewhiEM7J6qyNbUsfFH6luTEGF6C',
+    2,
+    1
+);
+
+************ 05/03/2026 - Second Phase *********
+UPDATE Users
+SET PasswordHash = '$2b$10$vp8VPPgh.DmijN06yjy0Ge5wMAAVyI/61YzWJF.vhch67GvE31v2a' -- paste your new hash
+WHERE Email = 'admin@demo.com';
+
+CREATE TABLE Settings (
+    SettingID INT PRIMARY KEY IDENTITY,
+    KeyName NVARCHAR(100),
+    Value NVARCHAR(100)
+);
+
+INSERT INTO Settings (KeyName, Value)
+VALUES ('Currency', 'USD');
+
+CREATE UNIQUE INDEX UX_Product_Name
+ON Products(Name);
+
+CREATE UNIQUE INDEX UX_Category_Name
+ON Categories(Name);
+
+DROP TABLE ProductImages;
+
+CREATE TABLE ProductImages (
+    ImageID INT PRIMARY KEY IDENTITY,
+    ProductID INT,
+    ImageData VARBINARY(MAX),   -- actual image stored
+    MimeType NVARCHAR(50),      -- image/png, image/jpeg
+    FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+);
+
+ALTER TABLE Products
+ADD Barcode NVARCHAR(100) UNIQUE;
+
+CREATE INDEX IX_Products_Barcode ON Products(Barcode);
+
+ALTER TABLE Products
+ADD IsActive BIT DEFAULT 1;
+
+-- Ensure only ONE company record logic is enforced
+CREATE TABLE CompanyProfile (
+    CompanyID INT IDENTITY PRIMARY KEY,
+    Name NVARCHAR(200),
+    Logo VARBINARY(MAX),
+    MimeType NVARCHAR(100),
+    Address NVARCHAR(500),
+    Phone NVARCHAR(50),
+    Email NVARCHAR(150),
+    Website NVARCHAR(150),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME NULL
+);
+
+ALTER TABLE Users
+ADD Photo VARBINARY(MAX),
+    MimeType NVARCHAR(100),
+    UpdatedAt DATETIME;
+
+	CREATE LOGIN ecommerce_user 
+WITH PASSWORD = 'StrongPassword@123';
+
+USE ECommerceDB;
+
+CREATE USER ecommerce_user FOR LOGIN ecommerce_user;
+
+ALTER ROLE db_owner ADD MEMBER ecommerce_user;
+ALTER TABLE Users
+ADD LastLogin DATETIME NULL;
+Insert into Settings Values('DevelopedBy','Sethuraman'),('CopyrightsCompanyName','HR INFO')
+
+****************** 04/APRIl/2026 ***********************
+
+
+CREATE TABLE Currencies (
+    CurrencyID INT IDENTITY PRIMARY KEY,
+    Code NVARCHAR(10),
+    Name NVARCHAR(100),
+    Symbol NVARCHAR(10),
+    IsActive BIT DEFAULT 1
+);
+ALTER TABLE Currencies
+ALTER COLUMN Name NVARCHAR(100);
+
+ALTER TABLE Currencies
+ALTER COLUMN Symbol NVARCHAR(10);
+
+INSERT INTO Currencies (Code, Name, Symbol) VALUES
+('USD','US Dollar',N'$'),
+('EUR','Euro',N'€'),
+('GBP','British Pound',N'£'),
+('JPY','Japanese Yen',N'¥'),
+('CHF','Swiss Franc',N'CHF'),
+('CAD','Canadian Dollar',N'C$'),
+('AUD','Australian Dollar',N'A$'),
+('NZD','New Zealand Dollar',N'NZ$'),
+
+('BHD','Bahraini Dinar',N'BD'),
+('SAR','Saudi Riyal',N'﷼'),
+('AED','UAE Dirham',N'د.إ'),
+('QAR','Qatari Riyal',N'﷼'),
+('KWD','Kuwaiti Dinar',N'KD'),
+('OMR','Omani Rial',N'﷼'),
+('JOD','Jordanian Dinar',N'JD'),
+('ILS','Israeli Shekel',N'₪'),
+
+('INR','Indian Rupee',N'₹'),
+('PKR','Pakistani Rupee',N'₨'),
+('BDT','Bangladeshi Taka',N'৳'),
+('LKR','Sri Lankan Rupee',N'₨'),
+('NPR','Nepalese Rupee',N'₨'),
+('CNY','Chinese Yuan',N'¥'),
+('HKD','Hong Kong Dollar',N'HK$'),
+('SGD','Singapore Dollar',N'S$'),
+('KRW','South Korean Won',N'₩'),
+('THB','Thai Baht',N'฿'),
+('MYR','Malaysian Ringgit',N'RM'),
+('IDR','Indonesian Rupiah',N'Rp'),
+('PHP','Philippine Peso',N'₱'),
+('VND','Vietnamese Dong',N'₫');
+
+drop table Orders
+drop table OrderItems
+drop table Payments
+drop table Customers
+
+Select * From Payments
+
+CREATE TABLE Customers (
+    CustomerID INT IDENTITY(1,1) PRIMARY KEY,
+
+    FullName NVARCHAR(150) NOT NULL,
+    Email NVARCHAR(150) NULL,
+    Phone NVARCHAR(30) NULL,
+
+    AddressLine1 NVARCHAR(255) NULL,
+    AddressLine2 NVARCHAR(255) NULL,
+    City NVARCHAR(100) NULL,
+    State NVARCHAR(100) NULL,
+    Country NVARCHAR(100) NULL,
+    PostalCode NVARCHAR(20) NULL,
+
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+-- If you are still designing (BEST OPTION)
+CREATE TABLE Orders (
+    OrderID INT IDENTITY(1,1) PRIMARY KEY,
+
+    CustomerID INT NOT NULL,
+
+    TotalAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
+
+    Status NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+
+    CreatedAt DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT FK_Orders_Customers
+        FOREIGN KEY (CustomerID)
+        REFERENCES Customers(CustomerID)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE OrderItems (
+    OrderItemID INT IDENTITY(1,1) PRIMARY KEY,
+
+    OrderID INT NOT NULL,
+    ProductID INT NOT NULL,
+
+    Quantity INT NOT NULL,
+    Price DECIMAL(10,2) NOT NULL,
+
+    CONSTRAINT FK_OrderItems_Orders
+        FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+        ON DELETE CASCADE,
+
+    CONSTRAINT FK_OrderItems_Products
+        FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+);
+
+
+CREATE TABLE Payments (
+    PaymentID INT IDENTITY(1,1) PRIMARY KEY,
+
+    OrderID INT NOT NULL,
+
+    PaymentMethod NVARCHAR(50),
+    PaymentStatus NVARCHAR(50),
+    TransactionID NVARCHAR(255),
+    PaidAt DATETIME,
+
+    CONSTRAINT FK_Payments_Orders
+        FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+        ON DELETE CASCADE
+);
+
+
+INSERT INTO Customers (FullName, Email, Phone, City, Country)
+VALUES 
+('John Doe', 'john@gmail.com', '123456789', 'Manama', 'Bahrain'),
+('Sara Ali', 'sara@gmail.com', '987654321', 'Riffa', 'Bahrain'),
+('Michael Smith', 'mike@gmail.com', '555111222', 'Dubai', 'UAE');
+
+
+INSERT INTO Orders (CustomerID, TotalAmount, Status)
+VALUES 
+(1, 120.50, 'Pending'),
+(2, 250.00, 'Processing'),
+(3, 99.99, 'Shipped'),
+(1, 560.75, 'Delivered'),
+(2, 45.00, 'Cancelled');
+sp_Columns Orders
+Select * From Products
+Select * From Orders
+Select * From OrderItems
+INSERT INTO OrderItems (OrderID, ProductID, Quantity, Price)
+VALUES 
+(1, 4, 2, 50.00),
+(1, 5, 1, 20.50),
+(2, 6, 5, 50.00),
+(3, 7, 1, 99.99),
+(4, 5, 4, 120.00),
+(5, 6, 1, 45.00);
+
+INSERT INTO Payments (OrderID, PaymentMethod, PaymentStatus, TransactionID, PaidAt)
+VALUES 
+(1, 'Cash', 'Pending', NULL, NULL),
+(2, 'Card', 'Paid', 'TXN12345', GETDATE()),
+(3, 'Online', 'Paid', 'TXN99999', GETDATE()),
+(4, 'Card', 'Paid', 'TXN88888', GETDATE()),
+(5, 'Cash', 'Failed', NULL, NULL);
+ALTER TABLE Orders
+ADD CustomerRemarks NVARCHAR(500) NULL,
+    AdminRemarks NVARCHAR(500) NULL;
+	Select * From OrderRemarksHistory
+
+	Select * From Orders
+
+	CREATE TABLE OrderRemarksHistory (
+    RemarkID INT IDENTITY PRIMARY KEY,
+    OrderID INT,
+    Status NVARCHAR(50),
+    Remarks NVARCHAR(1000),
+    CreatedBy NVARCHAR(100),
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+*************** 04/05/2026 *******************
+
+CREATE TABLE PaymentStatusHistory (
+    HistoryID INT IDENTITY PRIMARY KEY,
+    PaymentID INT,
+    OldStatus NVARCHAR(50),
+    NewStatus NVARCHAR(50),
+    Remarks NVARCHAR(500),
+    ChangedBy INT NULL,
+    ChangedAt DATETIME DEFAULT GETDATE()
+);
+
+******************* 05/05/2026 - OFFICE *******************
+
+ALTER TABLE Orders
+ADD CouponID INT NULL;
+
+ALTER TABLE Orders
+ADD DiscountAmount DECIMAL(10,2) NULL;
+
+INSERT INTO Settings (KeyName, Value) VALUES
+('VATPercent', '0'),
+('AdditionalChargesPercent', '0'),
+('AllowedPaymentMethods', 'Cash,Card');
+
+ALTER TABLE Customers
+ADD PasswordHash NVARCHAR(255) NULL,
+    IsGoogleUser BIT DEFAULT 0;
+
+	ALTER TABLE Products
+ADD UnitType NVARCHAR(20) DEFAULT 'pcs';
