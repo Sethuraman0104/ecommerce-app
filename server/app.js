@@ -32,43 +32,18 @@ app.use(passport.initialize());
 /* =========================
    ROUTES
 ========================= */
-
-// 🔐 ADMIN AUTH (Users table)
 app.use('/api/auth', require('./routes/auth'));
-
-// 🛒 CUSTOMER AUTH (Customers table)
 app.use('/api/customer-auth', require('./routes/customerAuth'));
-
-// 📦 PRODUCTS
 app.use('/api/products', require('./routes/products'));
-
-// 📂 CATEGORIES
 app.use('/api/categories', require('./routes/categories'));
-
-// 🏢 COMPANY INFO
 app.use('/api/company', require('./routes/company'));
-
-// ⚙️ SETTINGS
 app.use('/api/settings', require('./routes/settings'));
-
-// 👤 CUSTOMERS
 app.use('/api/customers', require('./routes/customers'));
-
-// 🛒 ORDERS
 app.use('/api/orders', require('./routes/orders'));
-
-// 💳 PAYMENTS
 app.use('/api/payments', require('./routes/payments'));
-
-// 🎟 COUPONS
 app.use('/api/coupons', require('./routes/coupons'));
-
-// 🌍 PUBLIC
 app.use('/api/public', require('./routes/public'));
-
-const profileRoutes = require('./routes/profile');
-
-app.use('/api/profile', profileRoutes);
+app.use('/api/profile', require('./routes/profile'));
 
 /* =========================
    DEFAULT PAGE
@@ -83,7 +58,28 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Home: http://localhost:${PORT}`);
-    console.log(`Admin: http://localhost:${PORT}/admin-login.html`);
+
+    const url = `http://localhost:${PORT}`;
+
+    console.log(`🟢 Server running on ${url}`);
+    console.log(`🏠 Home: ${url}`);
+    console.log(`🔐 Admin: ${url}/admin-login.html`);
+
+    /* =========================
+       AUTO OPEN BROWSER
+    ========================= */
+    if (process.env.AUTO_OPEN !== "false") {
+
+        let command;
+
+        if (process.platform === "win32") {
+            command = `start ${url}`;
+        } else if (process.platform === "darwin") {
+            command = `open ${url}`;
+        } else {
+            command = `xdg-open ${url}`;
+        }
+
+        exec(command);
+    }
 });

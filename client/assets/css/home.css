@@ -877,7 +877,7 @@ opacity:.8;
 .page-title-header {
     font-size: 18px;
     font-weight: 600;
-    color: #333;
+    color: #FFF;
 }
 
 /* =========================
@@ -1019,4 +1019,120 @@ opacity:.8;
     .row {
         flex-direction: column;
     }
+}
+
+#toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 10px;
+    padding: 14px 20px;
+    position: fixed;
+    z-index: 999999;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+#toast.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+#toast.success {
+    background-color: #2ecc71;
+}
+
+#toast.error {
+    background-color: #e74c3c;
+}
+
+#toast.info {
+    background-color: #333;
+}
+
+#paymentModal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+}
+
+.modal-box {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    background: #fff;
+    width: 420px;
+    padding: 20px;
+    border-radius: 14px;
+}
+
+.summary-box {
+    background: #f7f7f7;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.input {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.payment-option {
+    display: block;
+    padding: 8px;
+    border: 1px solid #ddd;
+    margin: 5px 0;
+    border-radius: 6px;
+}
+
+.theme-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+.input {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.btn {
+    padding: 8px 12px;
+    background: #444;
+    color: #fff;
+    border-radius: 6px;
+    margin-top: 5px;
+}
+
+.payment-option {
+    display: block;
+    padding: 10px;
+    border: 1px solid #eee;
+    margin: 6px 0;
+    border-radius: 8px;
 }

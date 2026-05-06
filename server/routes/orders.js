@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { poolPromise } = require("../config/db");
 const sql = require("mssql");
-
+const jwt = require("jsonwebtoken");
 
 // =========================
 // GET ORDERS (LIST)
@@ -252,6 +252,104 @@ router.delete("/:id", async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: err.message });
+    }
+});
+
+router.post("/full-create", async (req, res) => {
+
+    try {
+
+        const auth = req.headers.authorization;
+        if (!auth) return res.status(401).json({ success: false });
+
+        const token = auth.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const customerId = decoded.customerId;
+
+        const {
+            Items,
+            SubTotal,
+            VAT,
+            AdditionalCharges,
+            DiscountAmount,
+            CouponID,
+            GrandTotal,
+            PaymentMethod
+        } = req.body;
+
+        const pool = await poolPromise;
+        const transaction = new sql.Transaction(pool);
+
+        await transaction.begin();
+
+        try {
+
+            // 1. ORDER STATUS RULE
+            const orderStatus = "Processing";
+
+            // 2. PAYMENT STATUS RULE
+            const paymentStatus =
+                PaymentMethod === "COD" ? "Pending" : "Success";
+
+            // 3. CREATE ORDER
+            const orderResult = await new sql.Request(transaction)
+                .input("CustomerID", sql.Int, customerId)
+                .input("TotalAmount", sql.Decimal(18, 2), GrandTotal)
+                .input("Status", sql.NVarChar, orderStatus)
+                .input("CouponID", sql.Int, CouponID)
+                .input("DiscountAmount", sql.Decimal(18,2), DiscountAmount || 0)
+                .query(`
+                    INSERT INTO Orders
+                    (CustomerID, TotalAmount, Status, CreatedAt, CouponID, DiscountAmount)
+                    OUTPUT INSERTED.OrderID
+                    VALUES
+                    (@CustomerID, @TotalAmount, @Status, GETDATE(), @CouponID, @DiscountAmount)
+                `);
+
+            const orderId = orderResult.recordset[0].OrderID;
+
+            // 4. ITEMS
+            for (let item of Items) {
+
+                await new sql.Request(transaction)
+                    .input("OrderID", sql.Int, orderId)
+                    .input("ProductID", sql.Int, item.ProductID)
+                    .input("Quantity", sql.Int, item.Qty)
+                    .input("Price", sql.Decimal(18, 2), item.Price)
+                    .query(`
+                        INSERT INTO OrderItems
+                        (OrderID, ProductID, Quantity, Price)
+                        VALUES
+                        (@OrderID, @ProductID, @Quantity, @Price)
+                    `);
+            }
+
+            // 5. PAYMENT TABLE
+            await new sql.Request(transaction)
+                .input("OrderID", sql.Int, orderId)
+                .input("PaymentMethod", sql.NVarChar, PaymentMethod)
+                .input("PaymentStatus", sql.NVarChar, paymentStatus)
+                .input("TransactionID", sql.NVarChar, "TXN" + Date.now())
+                .query(`
+                    INSERT INTO Payments
+                    (OrderID, PaymentMethod, PaymentStatus, TransactionID, PaidAt)
+                    VALUES
+                    (@OrderID, @PaymentMethod, @PaymentStatus, @TransactionID, GETDATE())
+                `);
+
+            await transaction.commit();
+
+            res.json({ success: true, orderId });
+
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 

@@ -2,152 +2,325 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Customer Login</title>
+
+<title id="pageTitle">Loading...</title>
+<link id="appFavicon" rel="icon" href="assets/logo.png">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/home.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
-body{
-    margin:0;
-    font-family:Arial;
-    background:#f5f6fa;
+
+/* ================= LAYOUT ================= */
+.auth-wrapper{
     display:flex;
     justify-content:center;
     align-items:center;
-    height:100vh;
+    height:calc(100vh - 70px);
 }
 
-.box{
-    width:380px;
-    background:white;
-    padding:25px;
-    border-radius:12px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.1);
+/* ================= CARD ================= */
+.auth-card{
+    width:400px;
+    background:#fff;
+    border-radius:16px;
+    padding:30px;
+    box-shadow:0 15px 40px rgba(0,0,0,0.1);
+    animation:fadeIn 0.4s ease;
 }
 
-h2{
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(20px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+/* ================= HEADER ================= */
+.auth-title{
     text-align:center;
+    font-size:22px;
+    font-weight:600;
     margin-bottom:20px;
 }
 
-input{
+/* ================= INPUT ================= */
+.auth-card input{
     width:100%;
     padding:12px;
     margin:8px 0;
+    border-radius:10px;
     border:1px solid #ddd;
-    border-radius:8px;
+    font-size:14px;
 }
 
-button{
+/* ================= BUTTONS ================= */
+.btn-auth{
     width:100%;
     padding:12px;
-    margin-top:10px;
     border:none;
-    border-radius:8px;
+    border-radius:10px;
+    margin-top:10px;
     cursor:pointer;
-    font-weight:bold;
+    font-weight:600;
+    transition:0.2s;
 }
 
-.btn-login{ background:#ffb703; }
-.btn-login:hover{ background:#fca311; }
+.btn-login{
+    background:#ffb703;
+}
+
+.btn-login:hover{
+    background:#fca311;
+}
 
 .btn-google{
     background:#db4437;
-    color:white;
+    color:#fff;
 }
 
+.btn-google:hover{
+    background:#c1351d;
+}
+
+/* ================= SWITCH ================= */
 .switch{
     text-align:center;
-    margin-top:10px;
+    margin-top:15px;
     cursor:pointer;
-    color:#555;
+    color:#666;
+    font-size:14px;
 }
 
-.hidden{ display:none; }
+.switch:hover{
+    color:#000;
+}
+
+/* ================= DIVIDER ================= */
+.divider{
+    text-align:center;
+    margin:15px 0;
+    color:#999;
+    font-size:13px;
+}
+
+/* ================= HIDE ================= */
+.hidden{
+    display:none;
+}
+
+#toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 10px;
+    padding: 14px 20px;
+    position: fixed;
+    z-index: 9999;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+#toast.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+#toast.success {
+    background-color: #2ecc71;
+}
+
+#toast.error {
+    background-color: #e74c3c;
+}
+
+#toast.info {
+    background-color: #333;
+}
+
+/* ANIMATION */
+@keyframes slideIn{
+    from{
+        opacity:0;
+        transform:translateX(50px);
+    }
+    to{
+        opacity:1;
+        transform:translateX(0);
+    }
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="box">
-
-    <h2 id="title">Login</h2>
-
-    <!-- LOGIN -->
-    <div id="loginBox">
-        <input id="loginEmail" placeholder="Email">
-        <input id="loginPassword" type="password" placeholder="Password">
-
-        <button class="btn-login" onclick="login()">Login</button>
-
-        <button class="btn-google" onclick="googleLogin()">
-            <i class="fa fa-google"></i> Login with Google
-        </button>
-
-        <div class="switch" onclick="toggle()">Create new account</div>
+<!-- ================= HEADER ================= -->
+<header class="topbar">
+    <div class="brand">
+        <img id="logo" src="assets/logo.png">
+        <span id="companyName">E-Shop</span>
     </div>
 
-    <!-- REGISTER -->
-    <div id="registerBox" class="hidden">
+    <div class="page-title-header">
+        <i class="fa fa-user"></i> Customer Access
+    </div>
 
-        <input id="rName" placeholder="Full Name">
-        <input id="rEmail" placeholder="Email">
-        <input id="rPassword" type="password" placeholder="Password">
+    <div class="actions">
+        <button class="icon-btn" onclick="goHome()">
+            <i class="fa fa-arrow-left"></i>
+        </button>
+    </div>
+</header>
 
-        <button class="btn-login" onclick="register()">Register</button>
+<!-- ================= BODY ================= -->
+<div class="auth-wrapper">
 
-        <div class="switch" onclick="toggle()">Already have account?</div>
+    <div class="auth-card">
+
+        <div class="auth-title" id="title">Login</div>
+
+        <!-- LOGIN -->
+        <div id="loginBox">
+            <input id="loginEmail" placeholder="Email">
+            <input id="loginPassword" type="password" placeholder="Password">
+
+            <button class="btn-auth btn-login" onclick="login()">
+                <i class="fa fa-sign-in-alt"></i> Login
+            </button>
+
+            <div class="divider">OR</div>
+
+            <button class="btn-auth btn-google" onclick="googleLogin()">
+                <i class="fa fa-google"></i> Continue with Google
+            </button>
+
+            <div class="switch" onclick="toggle()">
+                Create new account
+            </div>
+        </div>
+
+        <!-- REGISTER -->
+        <div id="registerBox" class="hidden">
+
+            <input id="rName" placeholder="Full Name">
+            <input id="rEmail" placeholder="Email">
+            <input id="rPassword" type="password" placeholder="Password">
+
+            <button class="btn-auth btn-login" onclick="register()">
+                <i class="fa fa-user-plus"></i> Register
+            </button>
+
+            <div class="switch" onclick="toggle()">
+                Already have account?
+            </div>
+        </div>
+
     </div>
 
 </div>
-
+<!-- <div id="toast"></div> -->
 <script src="assets/js/customer-common.js"></script>
 
 <script>
+
+/* ================= INIT ================= */
+CustomerApp.init();
+
+/* ================= NAV ================= */
+function goHome(){
+    window.location.href = "index.html";
+}
+
+/* ================= TOGGLE ================= */
 function toggle(){
-    document.getElementById("loginBox").classList.toggle("hidden");
-    document.getElementById("registerBox").classList.toggle("hidden");
+
+    const loginBox = document.getElementById("loginBox");
+    const registerBox = document.getElementById("registerBox");
+
+    loginBox.classList.toggle("hidden");
+    registerBox.classList.toggle("hidden");
 
     document.getElementById("title").innerText =
-        document.getElementById("loginBox").classList.contains("hidden")
-        ? "Register"
-        : "Login";
+        loginBox.classList.contains("hidden") ? "Register" : "Login";
 }
 
 /* ================= LOGIN ================= */
 async function login(){
 
-    const email = loginEmail.value;
-    const password = loginPassword.value;
+    try {
 
-    const res = await CustomerApp.api("/customer-auth/login", "POST", {
-        email,
-        password
-    });
+        const email = loginEmail.value.trim();
+        const password = loginPassword.value.trim();
 
-    if(res.token){
-        CustomerApp.setAuth(res.token, res.customer);
+        if (!email || !password) {
+            CustomerApp.toast("Email and password required", "error");
+            return;
+        }
 
-        redirectAfterLogin();
-    } else {
-        alert(res.message || "Login failed");
+        const res = await CustomerApp.api("/customer-auth/login", "POST", {
+            email,
+            password
+        });
+
+        if(res.token){
+
+            CustomerApp.setAuth(res.token, res.customer);
+
+            CustomerApp.toast("Login successful", "success");
+
+            setTimeout(() => {
+                redirectAfterLogin();
+            }, 800);
+
+        } else {
+            CustomerApp.toast(res.message || "Invalid login", "error");
+        }
+
+    } catch (err) {
+
+        console.error("Login error:", err);
+
+        CustomerApp.toast("Invalid email or password", "error");
     }
 }
 
 /* ================= REGISTER ================= */
 async function register(){
 
-    const res = await CustomerApp.api("/customer-auth/register", "POST", {
-        name: rName.value,
-        email: rEmail.value,
-        password: rPassword.value
-    });
+    try {
 
-    alert(res.message || "Registered successfully");
+        const name = rName.value.trim();
+        const email = rEmail.value.trim();
+        const password = rPassword.value.trim();
 
-    toggle();
+        if (!name || !email || !password) {
+            CustomerApp.toast("All fields are required", "error");
+            return;
+        }
+
+        const res = await CustomerApp.api("/customer-auth/register", "POST", {
+            name,
+            email,
+            password
+        });
+
+        CustomerApp.toast(res.message || "Registered successfully", "success");
+
+        toggle();
+
+    } catch (err) {
+
+        console.error(err);
+
+        CustomerApp.toast("Registration failed", "error");
+    }
 }
 
 /* ================= GOOGLE ================= */
@@ -169,7 +342,6 @@ function redirectAfterLogin(){
     }
 }
 
-CustomerApp.init();
 </script>
 
 </body>

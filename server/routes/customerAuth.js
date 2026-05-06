@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const { poolPromise } = require('../config/db');
+const sql = require('mssql'); // ✅ ADD THIS at top (IMPORTANT)
 
 /* ================= REGISTER ================= */
 router.post('/register', async (req, res) => {
@@ -100,23 +101,137 @@ router.get('/me', async (req, res) => {
     try {
 
         const auth = req.headers.authorization;
-
         if (!auth) return res.status(401).json({ message: "No token" });
 
         const token = auth.split(" ")[1];
-
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         const pool = await poolPromise;
 
         const result = await pool.request()
             .input("CustomerID", decoded.customerId)
-            .query("SELECT * FROM Customers WHERE CustomerID=@CustomerID");
+            .query(`
+                SELECT 
+                    CustomerID,
+                    FullName,
+                    Email,
+                    Phone,
+                    AddressLine1,
+                    AddressLine2,
+                    City,
+                    State,
+                    Country,
+                    PostalCode
+                FROM Customers
+                WHERE CustomerID=@CustomerID
+            `);
 
-        res.json(result.recordset[0]);
+        return res.json(result.recordset[0]);
 
     } catch (err) {
-        res.status(401).json({ message: "Invalid token" });
+        return res.status(401).json({ message: "Invalid token" });
+    }
+});
+
+router.put('/update', async (req, res) => {
+    try {
+
+        const auth = req.headers.authorization;
+        if (!auth) return res.status(401).json({ success: false, message: "No token" });
+
+        const token = auth.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const customerId = Number(decoded.customerId);
+
+        if (!customerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid CustomerID in token"
+            });
+        }
+
+        const {
+            FullName,
+            Email,
+            Phone,
+            AddressLine1,
+            AddressLine2,
+            City,
+            State,
+            Country,
+            PostalCode
+        } = req.body;
+
+        const pool = await poolPromise;
+
+        await pool.request()
+            .input("CustomerID", sql.Int, customerId)
+            .input("FullName", sql.NVarChar, FullName || "")
+            .input("Email", sql.NVarChar, Email || "")
+            .input("Phone", sql.NVarChar, Phone || "")
+            .input("AddressLine1", sql.NVarChar, AddressLine1 || "")
+            .input("AddressLine2", sql.NVarChar, AddressLine2 || "")
+            .input("City", sql.NVarChar, City || "")
+            .input("State", sql.NVarChar, State || "")
+            .input("Country", sql.NVarChar, Country || "")
+            .input("PostalCode", sql.NVarChar, PostalCode || "")
+            .query(`
+                UPDATE Customers
+                SET 
+                    FullName=@FullName,
+                    Email=@Email,
+                    Phone=@Phone,
+                    AddressLine1=@AddressLine1,
+                    AddressLine2=@AddressLine2,
+                    City=@City,
+                    State=@State,
+                    Country=@Country,
+                    PostalCode=@PostalCode
+                WHERE CustomerID=@CustomerID
+            `);
+
+        res.json({ success: true });
+
+    } catch (err) {
+        console.error("UPDATE ERROR:", err);
+        res.status(500).json({
+            success: false,
+            message: "Update failed",
+            error: err.message
+        });
+    }
+});
+
+router.get("/coupons/validate", async (req, res) => {
+
+    try {
+
+        const { code } = req.query;
+
+        const pool = await poolPromise;
+
+        const result = await pool.request()
+            .input("Code", sql.NVarChar, code)
+            .query(`
+                SELECT *
+                FROM Coupons
+                WHERE Code=@Code
+                AND IsActive=1
+                AND ExpiryDate >= GETDATE()
+            `);
+
+        if (!result.recordset.length) {
+            return res.json({ valid: false });
+        }
+
+        res.json({
+            valid: true,
+            coupon: result.recordset[0]
+        });
+
+    } catch (err) {
+        res.status(500).json({ valid: false });
     }
 });
 

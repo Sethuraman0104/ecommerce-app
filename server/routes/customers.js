@@ -199,4 +199,61 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+router.put('/update', async (req, res) => {
+    try {
+
+        const auth = req.headers.authorization;
+        if (!auth) return res.status(401).json({ success: false });
+
+        const token = auth.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const {
+            FullName,
+            Email,
+            Phone,
+            AddressLine1,
+            AddressLine2,
+            City,
+            State,
+            Country,
+            PostalCode
+        } = req.body;
+
+        const pool = await poolPromise;
+
+        await pool.request()
+            .input("CustomerID", decoded.customerId)
+            .input("FullName", FullName)
+            .input("Email", Email)
+            .input("Phone", Phone)
+            .input("AddressLine1", AddressLine1)
+            .input("AddressLine2", AddressLine2)
+            .input("City", City)
+            .input("State", State)
+            .input("Country", Country)
+            .input("PostalCode", PostalCode)
+            .query(`
+                UPDATE Customers
+                SET 
+                    FullName=@FullName,
+                    Email=@Email,
+                    Phone=@Phone,
+                    AddressLine1=@AddressLine1,
+                    AddressLine2=@AddressLine2,
+                    City=@City,
+                    State=@State,
+                    Country=@Country,
+                    PostalCode=@PostalCode
+                WHERE CustomerID=@CustomerID
+            `);
+
+        res.json({ success: true });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+});
+
 module.exports = router;

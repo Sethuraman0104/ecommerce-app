@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Payment Gateway</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f6f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    width: 400px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+h2 {
+    margin-bottom: 10px;
+}
+
+.amount {
+    font-size: 22px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 15px 0;
+}
+
+.btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.pay {
+    background: #27ae60;
+    color: #fff;
+}
+
+.pay:hover {
+    background: #219150;
+}
+
+.cancel {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.loading {
+    display: none;
+    margin-top: 15px;
+    color: #555;
+}
+</style>
+
+</head>
+<body>
+
+<div class="box">
+
+    <h2>Secure Payment</h2>
+
+    <div class="amount" id="amount">Loading...</div>
+
+    <p id="orderInfo"></p>
+
+    <button class="btn pay" onclick="payNow()">
+        Pay Now
+    </button>
+
+    <button class="btn cancel" onclick="cancelPayment()">
+        Cancel
+    </button>
+
+    <div class="loading" id="loading">
+        Processing payment...
+    </div>
+
+</div>
+
+<script>
+
+const params = new URLSearchParams(window.location.search);
+
+const amount = params.get("amount") || "0";
+const order = params.get("order") || "TEMP";
+
+document.getElementById("amount").innerText =
+    "Amount: $" + parseFloat(amount).toFixed(2);
+
+document.getElementById("orderInfo").innerText =
+    "Order Reference: " + order;
+
+/* ================= PAYMENT SIMULATION ================= */
+function payNow() {
+
+    document.getElementById("loading").style.display = "block";
+
+    setTimeout(() => {
+
+        // simulate success token
+        const paymentResult = {
+            success: true,
+            transactionId: "TXN" + Date.now(),
+            orderId: order,
+            amount: amount
+        };
+
+        localStorage.setItem("paymentResult", JSON.stringify(paymentResult));
+
+        // redirect back to checkout
+        window.location.href = "/checkout.html?payment=success";
+
+    }, 2000);
+}
+
+/* ================= CANCEL ================= */
+function cancelPayment() {
+    window.location.href = "/checkout.html?payment=cancel";
+}
+
+</script>
+
+</body>
+</html>

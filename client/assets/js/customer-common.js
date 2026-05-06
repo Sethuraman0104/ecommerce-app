@@ -175,24 +175,32 @@ const CustomerApp = {
     // SETTINGS
     // ==========================
     async loadSettings() {
-        try {
+    try {
 
-            const data = await this.api("/settings");
+        const data = await this.api("/settings");
 
-            this.SETTINGS = {};
+        this.SETTINGS = {};
 
-            data.forEach(s => {
-                this.SETTINGS[s.KeyName] = s.Value;
-            });
+        data.forEach(s => {
+            this.SETTINGS[s.KeyName] = s.Value;
+        });
 
-            const code = (this.SETTINGS.Currency || "USD").toUpperCase();
+        // Currency
+        const code = (this.SETTINGS.Currency || "USD").toUpperCase();
+        await this.loadCurrencySymbol(code);
 
-            await this.loadCurrencySymbol(code);
+        // ✅ PAYMENT METHODS (NEW - IMPORTANT)
+        this.PAYMENT_METHODS = (this.SETTINGS.AllowedPaymentMethods || "COD")
+            .split(",")
+            .map(x => x.trim())
+            .filter(x => x.length > 0);
 
-        } catch (err) {
-            console.log("Settings failed", err);
-        }
-    },
+        console.log("💳 Allowed Payment Methods:", this.PAYMENT_METHODS);
+
+    } catch (err) {
+        console.log("Settings failed", err);
+    }
+},
 
     async loadCurrencySymbol(code) {
         try {
@@ -227,22 +235,42 @@ const CustomerApp = {
     // ==========================
     // TOAST
     // ==========================
+    // toast(message, type = "info") {
+
+    //     let container = document.getElementById("toast");
+
+    //     if (!container) {
+    //         container = document.createElement("div");
+    //         container.id = "toast";
+    //         document.body.appendChild(container);
+    //     }
+
+    //     const toast = document.createElement("div");
+    //     toast.className = `toast ${type}`;
+    //     toast.innerText = message;
+
+    //     container.appendChild(toast);
+
+    //     setTimeout(() => toast.remove(), 3000);
+    // }
     toast(message, type = "info") {
 
-        let container = document.getElementById("toast");
+    let container = document.getElementById("toast");
 
-        if (!container) {
-            container = document.createElement("div");
-            container.id = "toast";
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement("div");
-        toast.className = `toast ${type}`;
-        toast.innerText = message;
-
-        container.appendChild(toast);
-
-        setTimeout(() => toast.remove(), 3000);
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toast";
+        document.body.appendChild(container);
     }
+
+    container.innerText = message;
+
+    // reset classes properly
+    container.className = "";
+    container.classList.add(type, "show");
+
+    setTimeout(() => {
+        container.classList.remove("show");
+    }, 3000);
+}
 };

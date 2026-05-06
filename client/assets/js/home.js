@@ -244,21 +244,29 @@ const Shop = {
     /* ✅ CHANGE QTY INSIDE CART */
     changeQty(index, val) {
 
-        let item = this.cart[index];
-        if (!item) return;
+    let item = this.cart[index];
+    if (!item) return;
 
-        item.Qty = Math.max(1, item.Qty + val);
-        item.Total = item.Qty * item.Price;
+    item.Qty = Math.max(1, item.Qty + val);
+    item.Total = item.Qty * item.Price;
 
-        this.renderCart();
-    },
+    // ✅ SAVE
+    localStorage.setItem("cart", JSON.stringify(this.cart));
+
+    UI.updateBadge();
+    this.renderCart();
+},
 
     remove(index) {
-        this.cart.splice(index, 1);
 
-        UI.updateBadge();
-        this.renderCart();
-    },
+    this.cart.splice(index, 1);
+
+    // ✅ SAVE
+    localStorage.setItem("cart", JSON.stringify(this.cart));
+
+    UI.updateBadge();
+    this.renderCart();
+},
 
     closeQuick() {
         document.getElementById("quickView").style.display = "none";
