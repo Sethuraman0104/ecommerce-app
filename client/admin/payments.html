@@ -148,7 +148,8 @@
       <button class="ord-close-btn" onclick="Payments.closeModal()">X</button>
     </div>
 
-    <div style="padding:15px">
+    <!-- SCROLL AREA -->
+    <div class="ord-modal-body">
 
       <input type="hidden" id="payId">
 
@@ -163,8 +164,11 @@
       <label style="margin-top:10px">Remarks *</label>
       <textarea id="payRemarks" style="width:100%"></textarea>
 
+      <h3>Payment Summary</h3>
+      <div id="paySummary" class="pay-summary-box"></div>
+
       <h3 style="margin-top:15px">History</h3>
-      <div id="payHistory" style="max-height:150px; overflow:auto;"></div>
+      <div id="payHistory"></div>
 
     </div>
 

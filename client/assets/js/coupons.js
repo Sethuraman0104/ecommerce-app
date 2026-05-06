@@ -151,45 +151,102 @@ async viewUsage(id) {
         return;
     }
 
-    box.innerHTML = data.map(o => `
+    box.innerHTML = data.map(o => {
+
+        return `
 
         <div class="usage-card">
 
+            <!-- HEADER -->
             <div class="usage-header">
                 <div>
-                    <b>#${o.OrderID}</b>
+                    <b>Order #${o.OrderID}</b>
                     <div>${o.FullName || "Guest"}</div>
+                    <small>${o.Email || ""}</small>
                 </div>
 
                 <div class="usage-right">
-                    <div>${App.CURRENCY_SYMBOL}${o.TotalAmount}</div>
+                    <div><b>${App.CURRENCY_SYMBOL}${o.TotalAmount}</b></div>
                     <span class="ord-badge ord-status-${(o.Status || "").toLowerCase()}">
                         ${o.Status}
                     </span>
                 </div>
             </div>
 
+            <!-- PRODUCTS -->
             <div class="usage-items">
+                <h4>Products</h4>
+
                 ${o.Items.map(i => `
                     <div class="usage-item">
-                        <span>Product ${i.ProductID} x${i.Quantity}</span>
-                        <b>${App.CURRENCY_SYMBOL}${i.Price}</b>
+                        <div>
+                            <b>${i.ProductName || ("Product " + i.ProductID)}</b>
+                            <small>Qty: ${i.Quantity}</small>
+                        </div>
+                        <b>${App.CURRENCY_SYMBOL}${i.LineTotal}</b>
                     </div>
                 `).join("")}
             </div>
 
+            <!-- PAYMENT SUMMARY -->
             <div class="usage-payment">
-                <b>Payment:</b> ${o.PaymentMethod || "-"} 
-                (${o.PaymentStatus || "-"})
+
+                <h4>Payment Summary</h4>
+
+                <div class="pay-row">
+                    <span>Method</span>
+                    <b>${o.PaymentMethod || "-"}</b>
+                </div>
+
+                <div class="pay-row">
+                    <span>Status</span>
+                    <b>${o.PaymentStatus || "-"}</b>
+                </div>
+
+                <div class="pay-row">
+                    <span>Transaction</span>
+                    <b>${o.TransactionID || "-"}</b>
+                </div>
+
+                <hr>
+
+                <!-- BILLING BREAKDOWN -->
+                <div class="pay-row">
+                    <span>Sub Total</span>
+                    <b>${App.CURRENCY_SYMBOL}${o.SubTotal || 0}</b>
+                </div>
+
+                <div class="pay-row discount">
+                    <span>Discount</span>
+                    <b>- ${App.CURRENCY_SYMBOL}${o.DiscountAmount || 0}</b>
+                </div>
+
+                <div class="pay-row">
+                    <span>VAT (${o.VATPercent || 0}%)</span>
+                    <b>${App.CURRENCY_SYMBOL}${o.VATAmount || 0}</b>
+                </div>
+
+                <div class="pay-row">
+                    <span>Additional (${o.AdditionalPercent || 0}%)</span>
+                    <b>${App.CURRENCY_SYMBOL}${o.AdditionalAmount || 0}</b>
+                </div>
+
+                <div class="pay-row total">
+                    <span>Total</span>
+                    <b>${App.CURRENCY_SYMBOL}${o.TotalAmount || 0}</b>
+                </div>
+
             </div>
 
+            <!-- FOOTER -->
             <div class="usage-footer">
                 <small>${App.formatDate(o.CreatedAt)}</small>
             </div>
 
         </div>
 
-    `).join("");
+        `;
+    }).join("");
 
     modal.classList.add("show");
 },

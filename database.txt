@@ -416,3 +416,14 @@ ADD PasswordHash NVARCHAR(255) NULL,
 
 	ALTER TABLE Products
 ADD UnitType NVARCHAR(20) DEFAULT 'pcs';
+
+**************** 06/05/2026 **********************************
+ALTER TABLE Orders ADD
+VATPercent DECIMAL(5,2) NULL,
+VATAmount DECIMAL(18,2) NULL,
+AdditionalPercent DECIMAL(5,2) NULL,
+AdditionalAmount DECIMAL(18,2) NULL;
+
+ALTER TABLE Orders
+ADD 
+    SubTotal DECIMAL(18,2) DEFAULT 0

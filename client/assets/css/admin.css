@@ -2612,51 +2612,176 @@ body {
     }
 }
 
-/* ================= COUPON USAGE ================= */
+/* =========================
+   COUPON USAGE MODAL
+========================= */
 
-.usage-card {
-    background:#ffffff;
-    border:1px solid #e5e7eb;
-    border-radius:12px;
-    padding:14px;
-    margin-bottom:12px;
+#couponUsageModal .ord-modal-box {
+    width: 900px;
+    max-width: 95%;
 }
 
+/* scroll fix inside modal */
+#couponUsageModal .ord-modal-body {
+    display: block;
+    padding: 15px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* =========================
+   USAGE CARD
+========================= */
+
+.usage-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+
+    padding: 14px;
+    margin-bottom: 12px;
+
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+}
+
+/* =========================
+   HEADER
+========================= */
+
 .usage-header {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    margin-bottom: 10px;
+}
+
+.usage-header b {
+    font-size: 14px;
+    color: #fff;
+}
+
+.usage-header small {
+    color: #94a3b8;
 }
 
 .usage-right {
-    text-align:right;
+    text-align: right;
 }
 
+/* =========================
+   PRODUCTS
+========================= */
+
 .usage-items {
-    border-top:1px dashed #ddd;
-    margin-top:10px;
-    padding-top:10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.usage-items h4 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #93c5fd;
 }
 
 .usage-item {
-    display:flex;
-    justify-content:space-between;
-    font-size:13px;
-    padding:4px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.08);
 }
+
+.usage-item b {
+    color: #f1f5f9;
+}
+
+.usage-item small {
+    display: block;
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+/* =========================
+   PAYMENT SUMMARY
+========================= */
 
 .usage-payment {
-    margin-top:10px;
-    font-size:13px;
-    color:#374151;
+    margin-top: 12px;
+    padding-top: 10px;
+
+    border-top: 1px solid rgba(255,255,255,0.08);
 }
 
+.usage-payment h4 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #93c5fd;
+}
+
+.pay-row {
+    display: flex;
+    justify-content: space-between;
+
+    padding: 4px 0;
+    font-size: 13px;
+    color: #e2e8f0;
+}
+
+.pay-row span {
+    color: #94a3b8;
+}
+
+/* highlight rows */
+.pay-row.total {
+    font-weight: 700;
+    color: #22c55e;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin-top: 6px;
+    padding-top: 8px;
+}
+
+.pay-row.discount {
+    color: #f59e0b;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
 .usage-footer {
-    margin-top:10px;
-    text-align:right;
-    font-size:11px;
-    color:#9ca3af;
+    margin-top: 10px;
+    text-align: right;
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* =========================
+   EMPTY STATE
+========================= */
+
+#couponUsageList {
+    padding: 10px;
+}
+
+#couponUsageList > div {
+    text-align: center;
+    color: #94a3b8;
+}
+
+/* =========================
+   SCROLLBAR (optional clean look)
+========================= */
+
+#couponUsageModal .ord-modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+#couponUsageModal .ord-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
 }
 
 .checkbox-group {
@@ -2671,5 +2796,29 @@ body {
     padding:6px 10px;
     border-radius:8px;
     cursor:pointer;
+    font-size:13px;
+}
+
+.pay-line {
+    display:flex;
+    justify-content:space-between;
+    padding:4px 0;
+    font-size:13px;
+}
+
+.pay-total {
+    display:flex;
+    justify-content:space-between;
+    font-size:16px;
+    font-weight:bold;
+    margin-top:8px;
+    color:#FFF;
+}
+
+.ord-item {
+    display:flex;
+    justify-content:space-between;
+    padding:6px 0;
+    border-bottom:1px solid #eee;
     font-size:13px;
 }

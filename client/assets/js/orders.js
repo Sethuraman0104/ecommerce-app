@@ -4,8 +4,12 @@ const Orders = {
     currentOrderId: null,
 
     init() {
-        this.load();
         this.bindEvents();
+        this.waitForApp();
+    },
+    async waitForApp() {
+        await App.READY_PROMISE;   // 🔥 WAIT until currency + settings loaded
+        await this.load();
     },
 
     bindEvents() {
@@ -82,13 +86,13 @@ const Orders = {
 
                 <td>
                     <select class="ord-status-select"
-                        onchange="Orders.openUpdateModal(${o.OrderID}, this.value)">
-                        <option ${o.Status === "Pending" ? "selected" : ""}>Pending</option>
-                        <option ${o.Status === "Processing" ? "selected" : ""}>Processing</option>
-                        <option ${o.Status === "Shipped" ? "selected" : ""}>Shipped</option>
-                        <option ${o.Status === "Delivered" ? "selected" : ""}>Delivered</option>
-                        <option ${o.Status === "Cancelled" ? "selected" : ""}>Cancelled</option>
-                    </select>
+    onchange="Orders.openUpdateModal(${o.OrderID}, this.value, this)">
+    <option ${o.Status === "Pending" ? "selected" : ""}>Pending</option>
+    <option ${o.Status === "Processing" ? "selected" : ""}>Processing</option>
+    <option ${o.Status === "Shipped" ? "selected" : ""}>Shipped</option>
+    <option ${o.Status === "Delivered" ? "selected" : ""}>Delivered</option>
+    <option ${o.Status === "Cancelled" ? "selected" : ""}>Cancelled</option>
+</select>
                 </td>
 
                 <td>
@@ -154,18 +158,25 @@ const Orders = {
     },
 
     // =========================
-    // OPEN UPDATE MODAL (FIXED FLOW)
+    // OPEN MODAL
     // =========================
-    async openUpdateModal(orderId, status) {
+    async openUpdateModal(orderId, selectedStatus, el) {
 
         this.currentOrderId = orderId;
 
         const order = this.DATA.find(x => x.OrderID === orderId);
 
+        // ✅ IMPORTANT: use clicked value (NOT DB overwrite)
+        this.previousStatus = order?.Status || selectedStatus;
+
+        this.currentStatusElement = el;
+
         document.getElementById("updateOrderTitle").innerText =
             `Order #${orderId}`;
 
-        document.getElementById("updateStatus").value = status;
+        // 🔥 THIS is the fix — show correct selected value
+        document.getElementById("updateStatus").value = selectedStatus;
+
         document.getElementById("updateRemarks").value = "";
 
         await this.loadRemarksHistory(orderId);
@@ -173,8 +184,21 @@ const Orders = {
         document.getElementById("orderUpdateModal").classList.add("show");
     },
 
+    // =========================
+    // CANCEL MODAL (RESTORE UI)
+    // =========================
     closeUpdateModal() {
+
         document.getElementById("orderUpdateModal").classList.remove("show");
+
+        // 🔥 restore UI dropdown ONLY
+        if (this.currentStatusElement && this.previousStatus !== null) {
+            this.currentStatusElement.value = this.previousStatus;
+        }
+
+        this.currentOrderId = null;
+        this.currentStatusElement = null;
+        this.previousStatus = null;
     },
 
     // =========================
@@ -187,15 +211,32 @@ const Orders = {
 
         if (!this.currentOrderId) return;
 
-        await App.api(`/orders/${this.currentOrderId}/status`, "PUT", {
-            status,
-            adminRemarks: remarks
-        });
+        if (!remarks || remarks.trim() === "") {
+            App.toast("Admin remarks are required", "error");
+            document.getElementById("updateRemarks").focus();
+            return;
+        }
 
-        App.toast("Order updated successfully", "success");
+        try {
 
-        this.closeUpdateModal();
-        this.load();
+            await App.api(`/orders/${this.currentOrderId}/status`, "PUT", {
+                status,
+                adminRemarks: remarks.trim()
+            });
+
+            // 🔥 update local DATA so UI stays consistent
+            const order = this.DATA.find(x => x.OrderID === this.currentOrderId);
+            if (order) order.Status = status;
+
+            App.toast("Order updated successfully", "success");
+
+            this.closeUpdateModal();
+            this.render(); // IMPORTANT (refresh UI)
+
+        } catch (err) {
+            console.error(err);
+            App.toast("Failed to update order", "error");
+        }
     },
 
     // =========================
@@ -235,34 +276,62 @@ const Orders = {
         document.getElementById("ordModalSub").innerText =
             `${o.Status} • ${App.formatDate(o.CreatedAt)}`;
 
+        // ================= CUSTOMER =================
         document.getElementById("ordCustomerInfo").innerHTML = `
-            <div><b>${o.FullName}</b></div>
-            <div>${o.Phone || ""}</div>
-            <div>${o.AddressLine1 || ""}, ${o.City || ""}</div>
-            <div>${o.Country || ""}</div>
+        <div><b>${o.FullName}</b></div>
+        <div>${o.Phone || ""}</div>
+        <div>${o.AddressLine1 || ""}, ${o.City || ""}</div>
+        <div>${o.Country || ""}</div>
 
-            <hr>
+        <hr>
 
-            <div><b>Customer Remarks:</b></div>
-            <div>${o.CustomerRemarks || "-"}</div>
+        <div><b>Customer Remarks:</b></div>
+        <div>${o.CustomerRemarks || "-"}</div>
 
-            <div style="margin-top:8px;"><b>Admin Remarks:</b></div>
-            <div>${o.AdminRemarks || "-"}</div>
-        `;
+        <div style="margin-top:8px;"><b>Admin Remarks:</b></div>
+        <div>${o.AdminRemarks || "-"}</div>
+    `;
 
+        // ================= ITEMS =================
         document.getElementById("ordItemsList").innerHTML =
             res.items.map(i => `
-                <div class="ord-item">
-                    <span>${i.ProductName} x${i.Quantity}</span>
-                    <b>${App.CURRENCY_SYMBOL}${i.LineTotal}</b>
-                </div>
-            `).join("");
+            <div class="ord-item">
+                <span>${i.ProductName} x${i.Quantity}</span>
+                <b>${App.CURRENCY_SYMBOL}${i.LineTotal.toFixed(2)}</b>
+            </div>
+        `).join("");
+
+        // ================= PAYMENT SUMMARY (NEW) =================
+        const currency = App.CURRENCY_SYMBOL;
 
         document.getElementById("ordPaymentInfo").innerHTML = `
-            <div><b>Status:</b> ${res.payment?.PaymentStatus || "-"}</div>
-            <div><b>Method:</b> ${res.payment?.PaymentMethod || "-"}</div>
-            <div><b>Transaction:</b> ${res.payment?.TransactionID || "-"}</div>
-        `;
+
+        <div class="pay-line"><b>Payment Method:</b> ${res.payment?.PaymentMethod || "-"}</div>
+        <div class="pay-line"><b>Status:</b> ${res.payment?.PaymentStatus || "-"}</div>
+        <div class="pay-line"><b>Transaction:</b> ${res.payment?.TransactionID || "-"}</div>
+
+        <hr>
+
+        <div class="pay-line"><b>Subtotal:</b> ${currency}${(o.TotalAmount - (o.VATAmount + o.AdditionalAmount - o.DiscountAmount)).toFixed(2)}</div>
+
+        <div class="pay-line">
+            <b>VAT (${o.VATPercent || 0}%):</b> ${currency}${(o.VATAmount || 0).toFixed(2)}
+        </div>
+
+        <div class="pay-line">
+            <b>Additional (${o.AdditionalPercent || 0}%):</b> ${currency}${(o.AdditionalAmount || 0).toFixed(2)}
+        </div>
+
+        <div class="pay-line">
+            <b>Discount:</b> - ${currency}${(o.DiscountAmount || 0).toFixed(2)}
+        </div>
+
+        <hr>
+
+        <div class="pay-total">
+            <b>Grand Total:</b> ${currency}${o.TotalAmount.toFixed(2)}
+        </div>
+    `;
 
         document.getElementById("ordModal").classList.add("show");
     },
@@ -274,30 +343,68 @@ const Orders = {
     // =========================
     // PRINT
     // =========================
-    async printSingle(id) {
+    // =========================
+// PRINT
+// =========================
+async printSingle(id) {
 
-        const res = await App.api(`/orders/${id}/details`);
-        const o = res.order;
+    const res = await App.api(`/orders/${id}/details`);
+    const o = res.order;
 
-        const companyName = document.getElementById("companyName")?.innerText || "Company";
-        const logo = document.getElementById("companyLogo")?.src || "";
+    const companyName = document.getElementById("companyName")?.innerText || "Company";
+    const logo = document.getElementById("companyLogo")?.src || "";
 
-        const win = window.open("", "_blank");
+    const currency = App.CURRENCY_SYMBOL || "BD";
 
-        const html = `
+    const subtotal =
+        (o.TotalAmount || 0)
+        - ((o.VATAmount || 0) + (o.AdditionalAmount || 0))
+        + (o.DiscountAmount || 0);
+
+    const win = window.open("", "_blank");
+
+    const html = `
 <html>
 <head>
 <title>Invoice ${o.OrderID}</title>
 
 <style>
 body { font-family: Arial; padding: 40px; }
+
 .header { display:flex; justify-content:space-between; }
 .logo { height:60px; }
+
 table { width:100%; border-collapse:collapse; margin-top:10px; }
 th, td { border:1px solid #ccc; padding:8px; }
 th { background:#f3f4f6; }
+
 .right { text-align:right; }
-.total { margin-top:20px; text-align:right; font-size:20px; font-weight:bold; }
+
+.section-title {
+    margin-top: 20px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.summary-box {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    background: #fafafa;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 6px 0;
+}
+
+.total {
+    margin-top: 20px;
+    text-align:right;
+    font-size:20px;
+    font-weight:bold;
+}
 </style>
 
 </head>
@@ -345,23 +452,53 @@ ${res.items.map(i => `
 <tr>
 <td>${i.ProductName}</td>
 <td class="right">${i.Quantity}</td>
-<td class="right">${App.CURRENCY_SYMBOL}${i.Price}</td>
-<td class="right">${App.CURRENCY_SYMBOL}${i.LineTotal}</td>
+<td class="right">${currency}${parseFloat(i.Price).toFixed(2)}</td>
+<td class="right">${currency}${parseFloat(i.LineTotal).toFixed(2)}</td>
 </tr>
 `).join("")}
 </tbody>
 </table>
 
-<div class="total">
-Total: ${App.CURRENCY_SYMBOL}${o.TotalAmount}
+<!-- ================= PAYMENT SUMMARY ================= -->
+<div class="summary-box">
+
+    <div class="section-title">Payment Summary</div>
+
+    <div class="summary-row">
+        <span>Subtotal</span>
+        <span>${currency}${parseFloat(subtotal || 0).toFixed(2)}</span>
+    </div>
+
+    <div class="summary-row">
+        <span>VAT (${o.VATPercent || 0}%)</span>
+        <span>${currency}${parseFloat(o.VATAmount || 0).toFixed(2)}</span>
+    </div>
+
+    <div class="summary-row">
+        <span>Additional Charges (${o.AdditionalPercent || 0}%)</span>
+        <span>${currency}${parseFloat(o.AdditionalAmount || 0).toFixed(2)}</span>
+    </div>
+
+    <div class="summary-row">
+        <span>Discount</span>
+        <span>- ${currency}${parseFloat(o.DiscountAmount || 0).toFixed(2)}</span>
+    </div>
+
+    <hr>
+
+    <div class="summary-row total">
+        <span>Grand Total</span>
+        <span>${currency}${parseFloat(o.TotalAmount || 0).toFixed(2)}</span>
+    </div>
+
 </div>
 
 </body>
 </html>
 `;
 
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
-    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+}
 };

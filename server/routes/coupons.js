@@ -77,7 +77,7 @@ router.delete("/:id", async (req, res) => {
     res.json({ message: "Deleted" });
 });
 
-// ================= COUPON USAGE (ORDERS + PAYMENTS)
+// ================= COUPON USAGE (ORDERS + PRODUCTS + FULL SUMMARY)
 router.get("/:id/usage", async (req, res) => {
 
     try {
@@ -88,39 +88,51 @@ router.get("/:id/usage", async (req, res) => {
             .input("CouponID", sql.Int, req.params.id)
             .query(`
 
-                SELECT 
-                    o.OrderID,
-                    o.TotalAmount,
-                    o.Status,
-                    o.CreatedAt,
-                    o.CustomerRemarks,
-                    o.AdminRemarks,
-                    o.DiscountAmount,
+SELECT 
+    o.OrderID,
+    o.TotalAmount,
+    o.Status,
+    o.CreatedAt,
 
-                    c.FullName,
-                    c.Email,
+    o.SubTotal,
+    o.DiscountAmount,
+    o.VATPercent,
+    o.VATAmount,
+    o.AdditionalPercent,
+    o.AdditionalAmount,
 
-                    p.PaymentStatus,
-                    p.PaymentMethod,
-                    p.TransactionID,
+    c.FullName,
+    c.Email,
 
-                    (
-                        SELECT 
-                            oi.ProductID,
-                            oi.Quantity,
-                            oi.Price
-                        FROM OrderItems oi
-                        WHERE oi.OrderID = o.OrderID
-                        FOR JSON PATH
-                    ) AS Items
+    p.PaymentStatus,
+    p.PaymentMethod,
+    p.TransactionID,
+    p.PaidAt,
 
-                FROM Orders o
-                LEFT JOIN Customers c ON o.CustomerID = c.CustomerID
-                LEFT JOIN Payments p ON o.OrderID = p.OrderID
+    Items.Items
 
-                WHERE o.CouponID = @CouponID
+FROM Orders o
+LEFT JOIN Customers c ON o.CustomerID = c.CustomerID
+LEFT JOIN Payments p ON o.OrderID = p.OrderID
 
-                ORDER BY o.CreatedAt DESC
+OUTER APPLY (
+    SELECT (
+        SELECT 
+            oi.ProductID,
+            pr.Name AS ProductName,
+            oi.Quantity,
+            oi.Price,
+            (oi.Quantity * oi.Price) AS LineTotal
+        FROM OrderItems oi
+        LEFT JOIN Products pr ON pr.ProductID = oi.ProductID
+        WHERE oi.OrderID = o.OrderID
+        FOR JSON PATH
+    ) AS Items
+) Items
+
+WHERE o.CouponID = @CouponID
+ORDER BY o.CreatedAt DESC;
+
             `);
 
         const data = result.recordset.map(r => ({
@@ -131,7 +143,7 @@ router.get("/:id/usage", async (req, res) => {
         res.json(data);
 
     } catch (err) {
-        console.error("COUPON USAGE ERROR:", err);
+        console.error(err);
         res.status(500).json({ message: "Server error" });
     }
 });

@@ -16,14 +16,26 @@ router.get('/', async (req, res) => {
                 p.PaymentID,
                 p.OrderID,
                 c.FullName AS CustomerName,
+
+                ISNULL(o.SubTotal, 0) AS SubTotal,
+                ISNULL(o.VATPercent, 0) AS VATPercent,
+                ISNULL(o.VATAmount, 0) AS VATAmount,
+
+                ISNULL(o.AdditionalPercent, 0) AS AdditionalPercent,
+                ISNULL(o.AdditionalAmount, 0) AS AdditionalAmount,
+
+                ISNULL(o.DiscountAmount, 0) AS DiscountAmount,
                 ISNULL(o.TotalAmount, 0) AS Amount,
+
                 p.PaymentMethod,
                 p.PaymentStatus,
                 p.TransactionID,
                 p.PaidAt
+
             FROM Payments p
             LEFT JOIN Orders o ON p.OrderID = o.OrderID
             LEFT JOIN Customers c ON o.CustomerID = c.CustomerID
+
             ORDER BY p.PaymentID DESC
         `);
 

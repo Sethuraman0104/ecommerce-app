@@ -113,28 +113,47 @@ const Checkout = {
 
             CustomerApp.toast("Coupon applied", "success");
 
-            this.updatePaymentSummaryUI();
+            this.syncAllSummaries();
 
         } catch (err) {
             console.error(err);
             CustomerApp.toast("Coupon error", "error");
         }
-    }, updatePaymentSummaryUI() {
+    },
 
-        const box = document.querySelector(".summary-box");
+    syncAllSummaries() {
 
-        if (!box) return;
+        // always recalculate first
+        this.calculate();
 
         const c = CustomerApp.CURRENCY_SYMBOL;
 
-        box.innerHTML = `
-        <p>Subtotal: ${c} ${this.subtotal.toFixed(2)}</p>
-        <p>VAT: ${c} ${this.vatAmount.toFixed(2)}</p>
-        <p>Extra: ${c} ${this.extraAmount.toFixed(2)}</p>
-        <p>Discount: - ${c} ${(this.discountAmount || 0).toFixed(2)}</p>
-        <hr/>
-        <h4>Total: ${c} ${this.grandTotal.toFixed(2)}</h4>
-    `;
+        // ===== update main page =====
+        const main = document.querySelector(".order-summary-box");
+        if (main) {
+            main.innerHTML = `
+            <div class="summary-line"><span>Subtotal</span><span>${c} ${this.subtotal.toFixed(2)}</span></div>
+            <div class="summary-line"><span>VAT (${this.VAT}%)</span><span>${c} ${this.vatAmount.toFixed(2)}</span></div>
+            <div class="summary-line"><span>Additional Charges (${this.EXTRA}%)</span><span>${c} ${this.extraAmount.toFixed(2)}</span></div>
+            ${this.discountAmount > 0 ? `
+            <div class="summary-line discount"><span>Discount</span><span>- ${c} ${this.discountAmount.toFixed(2)}</span></div>
+            ` : ""}
+            <div class="summary-total"><span>Grand Total</span><span>${c} ${this.grandTotal.toFixed(2)}</span></div>
+        `;
+        }
+
+        // ===== update modal =====
+        const modal = document.querySelector(".pay-summary");
+        if (modal) {
+            modal.innerHTML = `
+            <div class="line"><span>Subtotal</span><span>${c} ${this.subtotal.toFixed(2)}</span></div>
+            <div class="line"><span>VAT (${this.VAT}%)</span><span>${c} ${this.vatAmount.toFixed(2)}</span></div>
+            <div class="line"><span>Additional</span><span>${c} ${this.extraAmount.toFixed(2)}</span></div>
+            <div class="line discount"><span>Discount</span><span>- ${c} ${(this.discountAmount || 0).toFixed(2)}</span></div>
+            <hr>
+            <div class="total"><span>Total</span><span>${c} ${this.grandTotal.toFixed(2)}</span></div>
+        `;
+        }
     },
 
     /* ================= USER ================= */
@@ -230,31 +249,71 @@ const Checkout = {
         const currency = CustomerApp.CURRENCY_SYMBOL;
 
         let html = `
-            <table class="order-table">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Qty - Unit</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Qty - Unit</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
+        // ================= ITEMS =================
         this.cart.forEach(i => {
             html += `
-                <tr>
-                    <td>${i.Name}</td>
-                    <td>${i.Qty} ${i.UnitType}</td>
-                    <td>${currency} ${(i.Total || 0).toFixed(2)}</td>
-                </tr>
-            `;
+            <tr>
+                <td>
+                    <div class="product-cell">
+                        <div class="p-name">${i.Name}</div>
+                    </div>
+                </td>
+                <td>${i.Qty} ${i.UnitType || "pcs"}</td>
+                <td>${currency} ${(i.Total || 0).toFixed(2)}</td>
+            </tr>
+        `;
         });
 
         html += `
-                </tbody>
-            </table>
-        `;
+            </tbody>
+        </table>
+
+        <!-- ================= SUMMARY ================= -->
+        <div class="order-summary-box">
+
+            <div class="summary-line">
+                <span>Subtotal</span>
+                <span>${currency} ${this.subtotal.toFixed(2)}</span>
+            </div>
+
+            <div class="summary-line">
+                <span>VAT (${this.VAT}%)</span>
+                <span>${currency} ${this.vatAmount.toFixed(2)}</span>
+            </div>
+
+            <div class="summary-line">
+                <span>Additional Charges (${this.EXTRA}%)</span>
+                <span>${currency} ${this.extraAmount.toFixed(2)}</span>
+            </div>
+
+            ${this.discountAmount > 0
+                ? `
+                <div class="summary-line discount">
+                    <span>Discount</span>
+                    <span>- ${currency} ${this.discountAmount.toFixed(2)}</span>
+                </div>
+                `
+                : ""
+            }
+
+            <div class="summary-total">
+                <span>Grand Total</span>
+                <span>${currency} ${this.grandTotal.toFixed(2)}</span>
+            </div>
+
+        </div>
+    `;
 
         document.getElementById("orderSummary").innerHTML = html;
     },
@@ -375,63 +434,114 @@ const Checkout = {
             document.body.appendChild(modal);
         }
 
+        const c = CustomerApp.CURRENCY_SYMBOL;
+
         modal.innerHTML = `
-        <div class="modal-overlay" onclick="Checkout.closePaymentModal()"></div>
+    <div class="pay-overlay" onclick="Checkout.closePaymentModal()"></div>
 
-        <div class="modal-box">
+    <div class="pay-modal">
 
+        <!-- HEADER -->
+        <div class="pay-header">
             <h3>💳 Payment & Summary</h3>
+            <button class="pay-close" onclick="Checkout.closePaymentModal()">✕</button>
+        </div>
 
-            <!-- COUPON -->
-            <div style="margin-bottom:10px;">
-                <input id="couponCode" placeholder="Coupon Code">
-                <button class="btn-secondary" onclick="Checkout.applyCoupon(document.getElementById('couponCode').value)">
-                    Apply
-                </button>
+        <!-- BODY -->
+        <div class="pay-body">
+
+            <!-- LEFT -->
+            <div class="pay-left">
+
+                <!-- COUPON -->
+                <div class="pay-section">
+                    <label>Coupon Code</label>
+                    <div class="pay-coupon">
+                        <input id="couponCode" placeholder="Enter coupon">
+                        <button onclick="Checkout.applyCoupon(document.getElementById('couponCode').value)">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PAYMENT OPTIONS -->
+                <div class="pay-section">
+                    <label>Select Payment Method</label>
+                    <div id="paymentOptions" class="pay-options"></div>
+                </div>
+
+                <!-- CARD -->
+                <div id="cardForm" class="pay-card" style="display:none;">
+                    <input id="cardNumber" placeholder="Card Number">
+                    <input id="cardName" placeholder="Card Holder Name">
+
+                    <div class="pay-row">
+                        <input id="cardExpiry" placeholder="MM/YY">
+                        <input id="cardCVV" placeholder="CVV">
+                    </div>
+
+                    <button class="btn-primary" onclick="Checkout.payCard()">
+                        Pay with Card
+                    </button>
+                </div>
+
             </div>
 
-            <!-- SUMMARY -->
-            <div class="summary-box">
-                <p>Subtotal: ${CustomerApp.CURRENCY_SYMBOL} ${this.subtotal.toFixed(2)}</p>
-                <p>VAT: ${CustomerApp.CURRENCY_SYMBOL} ${this.vatAmount.toFixed(2)}</p>
-                <p>Extra: ${CustomerApp.CURRENCY_SYMBOL} ${this.extraAmount.toFixed(2)}</p>
-                <p>Discount: - ${CustomerApp.CURRENCY_SYMBOL} ${this.discountAmount.toFixed(2)}</p>
-                <hr/>
-                <h4>Total: ${CustomerApp.CURRENCY_SYMBOL} ${this.grandTotal.toFixed(2)}</h4>
+            <!-- RIGHT -->
+            <div class="pay-right">
+
+                <h4>Order Summary</h4>
+
+                <div class="pay-summary">
+
+                    <div class="line">
+                        <span>Subtotal</span>
+                        <span>${c} ${this.subtotal.toFixed(2)}</span>
+                    </div>
+
+                    <div class="line">
+                        <span>VAT (${this.VAT}%)</span>
+                        <span>${c} ${this.vatAmount.toFixed(2)}</span>
+                    </div>
+
+                    <div class="line">
+                        <span>Additional</span>
+                        <span>${c} ${this.extraAmount.toFixed(2)}</span>
+                    </div>
+
+                    <div class="line discount">
+                        <span>Discount</span>
+                        <span>- ${c} ${(this.discountAmount || 0).toFixed(2)}</span>
+                    </div>
+
+                    <hr>
+
+                    <div class="total">
+                        <span>Total</span>
+                        <span>${c} ${this.grandTotal.toFixed(2)}</span>
+                    </div>
+
+                </div>
+
             </div>
-
-            <h4>Select Payment Method</h4>
-
-            <div id="paymentOptions"></div>
-
-            <div id="cardForm" style="display:none; margin-top:15px;">
-                <input id="cardNumber" placeholder="Card Number">
-                <input id="cardName" placeholder="Card Holder Name">
-                <input id="cardExpiry" placeholder="MM/YY">
-                <input id="cardCVV" placeholder="CVV">
-
-                <button class="btn-primary" onclick="Checkout.payCard()">
-                    Pay Card
-                </button>
-            </div>
-
-            <button class="btn-primary" onclick="Checkout.processPayment()">
-                Pay Now
-            </button>
-
-            <button class="btn-secondary" onclick="Checkout.closePaymentModal()">
-                Cancel
-            </button>
 
         </div>
+
+        <!-- FOOTER -->
+        <div class="pay-footer">
+            <button class="btn-secondary" onclick="Checkout.closePaymentModal()">Cancel</button>
+            <button class="btn-primary" onclick="Checkout.processPayment()">Pay Now</button>
+        </div>
+
+    </div>
     `;
 
         const container = modal.querySelector("#paymentOptions");
 
         container.innerHTML = this.paymentMethods.map(m => `
-        <label class="payment-option">
+        <label class="pay-option">
             <input type="radio" name="paymentMethod" value="${m}">
-            ${this.getPaymentLabel(m)}
+            <span>${this.getPaymentLabel(m)}</span>
         </label>
     `).join("");
 
@@ -511,20 +621,32 @@ const Checkout = {
 
     /* ================= FINAL ORDER ================= */
     async finalizeOrder(method, paymentStatus = "Success") {
-
+        console.log(method + 'Sethu Method');
+        console.log(paymentStatus + 'Sethu Method');
         const payload = {
-            Customer: this.getFormData(),
-            Items: this.cart,
-            SubTotal: this.subtotal,
-            VAT: this.vatAmount,
-            AdditionalCharges: this.extraAmount,
-            DiscountAmount: this.discountAmount,
-            CouponID: this.coupon?.CouponID || null,
-            GrandTotal: this.grandTotal,
-            PaymentMethod: method,
-            PaymentStatus: paymentStatus
-        };
+    Customer: this.getFormData(),
+    Items: this.cart,
 
+    SubTotal: this.subtotal,
+
+    VAT: {
+        percent: this.VAT,
+        amount: this.vatAmount
+    },
+
+    AdditionalCharges: {
+        percent: this.EXTRA,
+        amount: this.extraAmount
+    },
+
+    DiscountAmount: this.discountAmount,
+
+    CouponID: this.coupon?.CouponID || null,
+    GrandTotal: this.grandTotal,
+
+    PaymentMethod: method,
+    PaymentStatus: paymentStatus
+};
         try {
 
             const res = await CustomerApp.api("/orders/full-create", "POST", payload);

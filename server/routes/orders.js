@@ -57,6 +57,7 @@ router.get("/:id/details", async (req, res) => {
         const pool = await poolPromise;
         const orderId = req.params.id;
 
+        // ================= ORDER =================
         const orderResult = await pool.request()
             .input("OrderID", sql.Int, orderId)
             .query(`
@@ -67,6 +68,15 @@ router.get("/:id/details", async (req, res) => {
                     o.CreatedAt,
                     o.CustomerRemarks,
                     o.AdminRemarks,
+
+                    o.VATPercent,
+                    o.VATAmount,
+
+                    o.AdditionalPercent,
+                    o.AdditionalAmount,
+
+                    o.DiscountAmount,
+                    o.CouponID,
 
                     c.CustomerID,
                     c.FullName,
@@ -84,6 +94,7 @@ router.get("/:id/details", async (req, res) => {
                 WHERE o.OrderID = @OrderID
             `);
 
+        // ================= ITEMS =================
         const itemsResult = await pool.request()
             .input("OrderID", sql.Int, orderId)
             .query(`
@@ -99,6 +110,7 @@ router.get("/:id/details", async (req, res) => {
                 WHERE oi.OrderID = @OrderID
             `);
 
+        // ================= PAYMENT =================
         const paymentResult = await pool.request()
             .input("OrderID", sql.Int, orderId)
             .query(`
@@ -117,7 +129,6 @@ router.get("/:id/details", async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-
 
 // =========================
 // UPDATE STATUS + ADMIN REMARKS (HISTORY)
@@ -275,7 +286,8 @@ router.post("/full-create", async (req, res) => {
             DiscountAmount,
             CouponID,
             GrandTotal,
-            PaymentMethod
+            PaymentMethod,
+            PaymentStatus
         } = req.body;
 
         const pool = await poolPromise;
@@ -285,31 +297,96 @@ router.post("/full-create", async (req, res) => {
 
         try {
 
-            // 1. ORDER STATUS RULE
+            // ===============================
+            // ORDER STATUS
+            // ===============================
             const orderStatus = "Processing";
 
-            // 2. PAYMENT STATUS RULE
-            const paymentStatus =
-                PaymentMethod === "COD" ? "Pending" : "Success";
+            // ===============================
+            // PAYMENT LOGIC
+            // ===============================
+            const isCOD =
+                PaymentMethod === "COD" ||
+                PaymentMethod === "Cash";
 
-            // 3. CREATE ORDER
+            const finalPaymentStatus = isCOD
+                ? "Pending"
+                : (PaymentStatus || "Success");
+
+            const transactionId = isCOD
+                ? null
+                : "TXN" + Date.now();
+
+            // ===============================
+            // EXTRACT VAT / ADDITIONAL
+            // ===============================
+            const vatPercent = VAT?.percent || 0;
+            const vatAmount = VAT?.amount || 0;
+
+            const addPercent = AdditionalCharges?.percent || 0;
+            const addAmount = AdditionalCharges?.amount || 0;
+
+            // ===============================
+            // CREATE ORDER
+            // ===============================
             const orderResult = await new sql.Request(transaction)
                 .input("CustomerID", sql.Int, customerId)
                 .input("TotalAmount", sql.Decimal(18, 2), GrandTotal)
                 .input("Status", sql.NVarChar, orderStatus)
+
                 .input("CouponID", sql.Int, CouponID)
-                .input("DiscountAmount", sql.Decimal(18,2), DiscountAmount || 0)
+                .input("DiscountAmount", sql.Decimal(18, 2), DiscountAmount || 0)
+
+                .input("VATPercent", sql.Decimal(5, 2), vatPercent)
+                .input("VATAmount", sql.Decimal(18, 2), vatAmount)
+
+                .input("AdditionalPercent", sql.Decimal(5, 2), addPercent)
+                .input("AdditionalAmount", sql.Decimal(18, 2), addAmount)
+                .input("SubTotal", sql.Decimal(18, 2), SubTotal)
+
                 .query(`
                     INSERT INTO Orders
-                    (CustomerID, TotalAmount, Status, CreatedAt, CouponID, DiscountAmount)
+                    (
+                        CustomerID,
+                        TotalAmount,
+                        Status,
+                        CreatedAt,
+
+                        CouponID,
+                        DiscountAmount,
+
+                        VATPercent,
+                        VATAmount,
+
+                        AdditionalPercent,
+                        AdditionalAmount,
+                        SubTotal
+                    )
                     OUTPUT INSERTED.OrderID
                     VALUES
-                    (@CustomerID, @TotalAmount, @Status, GETDATE(), @CouponID, @DiscountAmount)
+                    (
+                        @CustomerID,
+                        @TotalAmount,
+                        @Status,
+                        GETDATE(),
+
+                        @CouponID,
+                        @DiscountAmount,
+
+                        @VATPercent,
+                        @VATAmount,
+
+                        @AdditionalPercent,
+                        @AdditionalAmount,
+                        @SubTotal
+                    )
                 `);
 
             const orderId = orderResult.recordset[0].OrderID;
 
-            // 4. ITEMS
+            // ===============================
+            // ORDER ITEMS
+            // ===============================
             for (let item of Items) {
 
                 await new sql.Request(transaction)
@@ -325,12 +402,14 @@ router.post("/full-create", async (req, res) => {
                     `);
             }
 
-            // 5. PAYMENT TABLE
+            // ===============================
+            // PAYMENT INSERT
+            // ===============================
             await new sql.Request(transaction)
                 .input("OrderID", sql.Int, orderId)
                 .input("PaymentMethod", sql.NVarChar, PaymentMethod)
-                .input("PaymentStatus", sql.NVarChar, paymentStatus)
-                .input("TransactionID", sql.NVarChar, "TXN" + Date.now())
+                .input("PaymentStatus", sql.NVarChar, finalPaymentStatus)
+                .input("TransactionID", sql.NVarChar, transactionId)
                 .query(`
                     INSERT INTO Payments
                     (OrderID, PaymentMethod, PaymentStatus, TransactionID, PaidAt)
@@ -338,9 +417,17 @@ router.post("/full-create", async (req, res) => {
                     (@OrderID, @PaymentMethod, @PaymentStatus, @TransactionID, GETDATE())
                 `);
 
+            // ===============================
+            // COMMIT
+            // ===============================
             await transaction.commit();
 
-            res.json({ success: true, orderId });
+            res.json({
+                success: true,
+                orderId,
+                paymentStatus: finalPaymentStatus,
+                transactionId
+            });
 
         } catch (err) {
             await transaction.rollback();
