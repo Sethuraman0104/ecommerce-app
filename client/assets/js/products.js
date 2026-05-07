@@ -110,116 +110,210 @@ const Products = {
         this.renderProducts(filtered);
     },
 
-    // =========================
-    // RENDER PRODUCTS (GROUPED VIEW - YOUR LOGIC KEPT)
-    // =========================
     renderProducts(data) {
-        const symbol = App.CURRENCY_SYMBOL || "$";
 
-    console.log("Sethu Product " + symbol);
+    const symbol = App.CURRENCY_SYMBOL || "$";
 
     const grid = document.getElementById("productGrid");
     if (!grid) return;
 
     grid.innerHTML = "";
 
-        if (!data.length) {
-            grid.innerHTML = `
-                <div class="empty-state">
-                    <i class="fa fa-box-open"></i>
-                    <h3>No Products Found</h3>
-                </div>
-            `;
-            return;
-        }
+    if (!data.length) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fa fa-box-open"></i>
+                <h3>No Products Found</h3>
+            </div>
+        `;
+        return;
+    }
 
-        // GROUP BY CATEGORY
-        const grouped = {};
+    const now = new Date();
 
-        data.forEach(p => {
-            const cat = p.Category || "Uncategorized";
-            if (!grouped[cat]) grouped[cat] = [];
-            grouped[cat].push(p);
-        });
+    const grouped = {};
 
-        Object.keys(grouped).forEach(cat => {
+    data.forEach(p => {
+        const cat = p.Category || "Uncategorized";
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(p);
+    });
 
-            const block = document.createElement("div");
-            block.className = "category-block";
+    Object.keys(grouped).forEach(cat => {
 
-            const title = document.createElement("div");
-            title.className = "cat-title";
-            title.innerText = "📁 " + cat;
+        const block = document.createElement("div");
+        block.className = "category-block";
 
-            const productsDiv = document.createElement("div");
-            productsDiv.className = "category-products";
+        const title = document.createElement("div");
+        title.className = "cat-title";
+        title.innerText = "📁 " + cat;
 
-            grouped[cat].forEach(p => {
+        const productsDiv = document.createElement("div");
+        productsDiv.className = "category-products";
 
-                const card = document.createElement("div");
-                card.className = "product-card";
+        grouped[cat].forEach(p => {
 
-                card.innerHTML = `
-                    <div class="product-actions">
-                        <button class="icon-btn edit" onclick="Products.edit(${p.ProductID})">
-                            <i class="fa fa-pen"></i>
-                        </button>
+            let finalPrice = parseFloat(p.Price);
 
-                        <button class="icon-btn delete" onclick="Products.delete(${p.ProductID})">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
+            // =========================
+            // OFFER VALIDATION (AUTO EXPIRE)
+            // =========================
+            let offerActive = false;
 
-                    <img src="${p.Image || '../assets/no-image.png'}" class="product-img"/>
+            if (p.HasOffer) {
 
-                    <h3>${p.Name}</h3>
-                    <p>${symbol}${p.Price} / ${p.UnitType || ""}</p>
-                    <small>Stock: ${p.Stock}</small>
+                const start = p.OfferStart ? new Date(p.OfferStart) : null;
+                const end = p.OfferEnd ? new Date(p.OfferEnd) : null;
 
-                    <div class="status ${p.IsActive ? 'active' : 'inactive'}">
-                        ${p.IsActive ? 'Active' : 'Inactive'}
-                    </div>
+                offerActive =
+                    (!start || start <= now) &&
+                    (!end || end >= now);
 
-                    <button class="toggle-btn"
-                        onclick="Products.toggleStatus(${p.ProductID}, ${p.IsActive})">
-                        ${p.IsActive ? 'Deactivate' : 'Activate'}
+                // if expired → treat as no offer
+                if (!offerActive) {
+                    p.HasOffer = 0;
+                }
+            }
+
+            // =========================
+            // PRICE CALCULATION
+            // =========================
+            if (offerActive && p.HasOffer) {
+
+                if (p.OfferType === "PERCENT") {
+                    finalPrice -= (finalPrice * parseFloat(p.OfferValue || 0) / 100);
+                }
+
+                if (p.OfferType === "AMOUNT") {
+                    finalPrice -= parseFloat(p.OfferValue || 0);
+                }
+
+                if (finalPrice < 0) finalPrice = 0;
+            }
+
+            const card = document.createElement("div");
+            card.className = "product-card";
+
+            card.innerHTML = `
+
+                <div class="product-actions">
+                    <button class="icon-btn edit" onclick="Products.edit(${p.ProductID})">
+                        <i class="fa fa-pen"></i>
                     </button>
-                `;
 
-                productsDiv.appendChild(card);
-            });
+                    <button class="icon-btn delete" onclick="Products.delete(${p.ProductID})">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
 
-            block.appendChild(title);
-            block.appendChild(productsDiv);
-            grid.appendChild(block);
+                ${offerActive && p.HasOffer ? `
+                    <div class="offer-badge">
+                        <i class="fa fa-tags"></i>
+                        ${p.OfferType === 'PERCENT'
+                            ? p.OfferValue + '% OFF'
+                            : symbol + p.OfferValue + ' OFF'}
+                    </div>
+                ` : ""}
+
+                <img src="${p.Image || '../assets/no-image.png'}" class="product-img"/>
+
+                <h3>${p.Name}</h3>
+
+                ${offerActive && p.HasOffer ? `
+                    <div class="price-box">
+
+                        <div class="old-price">
+                            ${symbol}${parseFloat(p.Price).toFixed(2)}
+                        </div>
+
+                        <div class="offer-price">
+                            ${symbol}${finalPrice.toFixed(2)} / ${p.UnitType || ""}
+                        </div>
+
+                    </div>
+
+                    <div class="offer-dates">
+                        <small>
+                            ${p.OfferStart ? new Date(p.OfferStart).toLocaleDateString() : ""}
+                            → 
+                            ${p.OfferEnd ? new Date(p.OfferEnd).toLocaleDateString() : ""}
+                        </small>
+                    </div>
+
+                ` : `
+                    <p class="normal-price">
+                        ${symbol}${parseFloat(p.Price).toFixed(2)}
+                        / ${p.UnitType || ""}
+                    </p>
+                `}
+
+                <small>Stock: ${p.Stock}</small>
+
+                <div class="status ${p.IsActive ? 'active' : 'inactive'}">
+                    ${p.IsActive ? 'Active' : 'Inactive'}
+                </div>
+
+                <button class="toggle-btn ${p.IsActive ? 'deactivate-btn' : 'activate-btn'}"
+                    onclick="Products.toggleStatus(${p.ProductID}, ${p.IsActive})">
+
+                    <i class="fa ${p.IsActive ? 'fa-ban' : 'fa-check-circle'}"></i>
+                    ${p.IsActive ? 'Deactivate Product' : 'Activate Product'}
+
+                </button>
+            `;
+
+            productsDiv.appendChild(card);
         });
-    },
 
-    // =========================
-    // EDIT
-    // =========================
-    edit(id) {
+        block.appendChild(title);
+        block.appendChild(productsDiv);
+        grid.appendChild(block);
+    });
+},
 
-        const p = this.PRODUCTS.find(x => x.ProductID == id);
-        if (!p) return;
+/* =========================
+   EDIT
+========================= */
+edit(id) {
 
-        document.getElementById("name").value = p.Name;
-        document.getElementById("name").dataset.id = p.ProductID;
-        document.getElementById("category").value = p.CategoryID;
-        document.getElementById("unitType").value = p.UnitType || "";
-        document.getElementById("price").value = p.Price;
-        document.getElementById("stock").value = p.Stock;
-        document.getElementById("barcode").value = p.Barcode || "";
-        document.getElementById("description").value = p.Description || "";
-        document.getElementById("isActive").checked = p.IsActive == 1;
+    const p = this.PRODUCTS.find(x => x.ProductID == id);
+    if (!p) return;
 
-        document.getElementById("productModal").classList.add("show");
-    },
+    document.getElementById("name").value = p.Name;
+    document.getElementById("name").dataset.id = p.ProductID;
 
-    // =========================
-    // SAVE
-    // =========================
-    async save() {
+    document.getElementById("category").value = p.CategoryID;
+    document.getElementById("unitType").value = p.UnitType || "";
+    document.getElementById("price").value = p.Price;
+    document.getElementById("stock").value = p.Stock;
+    document.getElementById("barcode").value = p.Barcode || "";
+    document.getElementById("description").value = p.Description || "";
+    document.getElementById("isActive").checked = p.IsActive == 1;
+
+    /* OFFER */
+    document.getElementById("hasOffer").checked = p.HasOffer == 1;
+    document.getElementById("offerType").value = p.OfferType || "";
+    document.getElementById("offerValue").value = p.OfferValue || "";
+
+    /* =========================
+   SAFE DATE HANDLING
+========================= */
+
+const formatDate = (d) => {
+    if (!d) return "";
+    return new Date(d).toISOString().split("T")[0];
+};
+
+document.getElementById("offerStart").value = formatDate(p.OfferStart);
+document.getElementById("offerEnd").value = formatDate(p.OfferEnd);
+
+    document.getElementById("productModal").classList.add("show");
+},
+
+/* =========================
+   SAVE
+========================= */
+async save() {
 
     const id = document.getElementById("name").dataset.id;
 
@@ -232,40 +326,41 @@ const Products = {
     const category = document.getElementById("category").value;
     const file = document.getElementById("image").files[0];
 
-    // =========================
-    // VALIDATION (STRICT FIX)
-    // =========================
+    /* BASIC VALIDATION */
+    if (!name) return App.toast("Product name required", "warning");
+    if (!unitType) return App.toast("Select unit type", "warning");
+    if (!price || price <= 0) return App.toast("Enter valid price", "warning");
+    if (!stockValue || isNaN(stock)) return App.toast("Stock is required", "warning");
+    if (stock < 0) return App.toast("Stock cannot be negative", "warning");
+    if (!category) return App.toast("Select category", "warning");
+    if (!barcode) return App.toast("Barcode is required", "warning");
+    if (!id && !file) return App.toast("Product image is required", "warning");
 
-    if (!name)
-        return App.toast("Product name required", "warning");
+    const hasOffer = document.getElementById("hasOffer").checked;
+const offerType = document.getElementById("offerType").value;
+const offerValue = document.getElementById("offerValue").value;
+const offerStart = document.getElementById("offerStart").value;
+const offerEnd = document.getElementById("offerEnd").value;
 
-    if (!unitType)
-    return App.toast("Select unit type", "warning");
+if (hasOffer) {
 
-    if (!price || price <= 0)
-        return App.toast("Enter valid price", "warning");
+    if (!offerType)
+        return App.toast("Select offer type", "warning");
 
-    // STOCK (NOW REQUIRED)
-    if (stockValue === "" || stockValue === null || isNaN(stock))
-        return App.toast("Stock is required", "warning");
+    if (!offerValue || parseFloat(offerValue) <= 0)
+        return App.toast("Enter valid offer value", "warning");
 
-    if (stock < 0)
-        return App.toast("Stock cannot be negative", "warning");
+    if (!offerStart)
+        return App.toast("Offer start date required", "warning");
 
-    if (!category)
-        return App.toast("Select category", "warning");
+    if (!offerEnd)
+        return App.toast("Offer end date required", "warning");
 
-    // BARCODE REQUIRED
-    if (!barcode)
-        return App.toast("Barcode is required", "warning");
+    if (new Date(offerStart) > new Date(offerEnd))
+        return App.toast("Offer end date must be after start date", "warning");
+}
 
-    // IMAGE REQUIRED ONLY FOR NEW PRODUCT
-    if (!id && !file)
-        return App.toast("Product image is required", "warning");
-
-    // =========================
-    // IMAGE CONVERT
-    // =========================
+    /* IMAGE */
     let imageBase64 = null;
     let mimeType = null;
 
@@ -278,21 +373,27 @@ const Products = {
         mimeType = file.type;
     }
 
-    // =========================
-    // PAYLOAD
-    // =========================
+    /* PAYLOAD */
     const payload = {
-    name,
-    description: document.getElementById("description").value,
-    category,
-    price,
-    stock,
-    barcode,
-    unitType,   // ✅ NEW
-    isActive: document.getElementById("isActive").checked ? 1 : 0,
-    imageBase64,
-    mimeType
-};
+        name,
+        description: document.getElementById("description").value,
+        category,
+        price,
+        stock,
+        barcode,
+        unitType,
+
+        isActive: document.getElementById("isActive").checked ? 1 : 0,
+
+        hasOffer: hasOffer ? 1 : 0,
+        offerType: offerType || null,
+        offerValue: parseFloat(offerValue || 0),
+        offerStart: offerStart || null,
+        offerEnd: offerEnd || null,
+
+        imageBase64,
+        mimeType
+    };
 
     try {
 

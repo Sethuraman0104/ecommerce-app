@@ -4,6 +4,52 @@ const { poolPromise } = require('../config/db');
 
 
 // ==========================
+// HELPER: OFFER VALIDATION
+// ==========================
+function normalizeOffer(hasOffer, offerStart, offerEnd) {
+
+    const now = new Date();
+
+    // If no offer
+    if (!hasOffer) {
+        return {
+            hasOffer: 0,
+            offerType: null,
+            offerValue: null,
+            offerStart: null,
+            offerEnd: null,
+            offerActive: 0
+        };
+    }
+
+    const start = offerStart ? new Date(offerStart) : null;
+    const end = offerEnd ? new Date(offerEnd) : null;
+
+    // Invalid dates → disable offer
+    if (!start || !end || start > end) {
+        return {
+            hasOffer: 0,
+            offerType: null,
+            offerValue: null,
+            offerStart: null,
+            offerEnd: null,
+            offerActive: 0
+        };
+    }
+
+    // Expired check
+    const active = (start <= now && end >= now) ? 1 : 0;
+
+    return {
+        hasOffer: hasOffer ? 1 : 0,
+        offerStart,
+        offerEnd,
+        offerActive: active
+    };
+}
+
+
+// ==========================
 // GET PRODUCTS
 // ==========================
 router.get('/', async (req, res) => {
@@ -21,6 +67,13 @@ router.get('/', async (req, res) => {
                 p.Barcode,
                 p.CategoryID,
                 p.IsActive,
+
+                p.HasOffer,
+                p.OfferType,
+                p.OfferValue,
+                p.OfferStart,
+                p.OfferEnd,
+
                 c.Name AS Category,
                 pi.ImageData,
                 pi.MimeType,
@@ -40,13 +93,17 @@ router.get('/', async (req, res) => {
         `);
 
         const products = result.recordset.map(p => {
+
             let image = null;
 
             if (p.ImageData) {
                 image = `data:${p.MimeType};base64,${Buffer.from(p.ImageData).toString('base64')}`;
             }
 
-            return { ...p, Image: image };
+            return {
+                ...p,
+                Image: image
+            };
         });
 
         res.json(products);
@@ -61,10 +118,39 @@ router.get('/', async (req, res) => {
 // ADD PRODUCT
 // ==========================
 router.post('/', async (req, res) => {
+
     try {
-        let { name, description, price, stock, category, barcode, unitType, isActive, imageBase64, mimeType } = req.body;
+
+        let {
+            name,
+            description,
+            price,
+            stock,
+            category,
+            barcode,
+            unitType,
+            isActive,
+
+            hasOffer,
+            offerType,
+            offerValue,
+            offerStart,
+            offerEnd,
+
+            imageBase64,
+            mimeType
+        } = req.body;
 
         const pool = await poolPromise;
+
+        // ==========================
+        // OFFER NORMALIZATION (SAFE)
+        // ==========================
+        const offer = normalizeOffer(
+            hasOffer,
+            offerStart,
+            offerEnd
+        );
 
         const result = await pool.request()
             .input('Name', name)
@@ -75,15 +161,58 @@ router.post('/', async (req, res) => {
             .input('Barcode', barcode)
             .input('IsActive', isActive ?? 1)
             .input('UnitType', unitType)
+
+            .input('HasOffer', offer.hasOffer)
+            .input('OfferType', offer.hasOffer ? offerType : null)
+            .input('OfferValue', offer.hasOffer ? offerValue : null)
+            .input('OfferStart', offer.offerStart)
+            .input('OfferEnd', offer.offerEnd)
+
             .query(`
-                INSERT INTO Products (Name, Description, Price, Stock, CategoryID, Barcode, IsActive, UnitType)
-OUTPUT INSERTED.ProductID
-VALUES (@Name, @Description, @Price, @Stock, @CategoryID, @Barcode, @IsActive, @UnitType)
+                INSERT INTO Products (
+                    Name,
+                    Description,
+                    Price,
+                    Stock,
+                    CategoryID,
+                    Barcode,
+                    IsActive,
+                    UnitType,
+
+                    HasOffer,
+                    OfferType,
+                    OfferValue,
+                    OfferStart,
+                    OfferEnd
+                )
+
+                OUTPUT INSERTED.ProductID
+
+                VALUES (
+                    @Name,
+                    @Description,
+                    @Price,
+                    @Stock,
+                    @CategoryID,
+                    @Barcode,
+                    @IsActive,
+                    @UnitType,
+
+                    @HasOffer,
+                    @OfferType,
+                    @OfferValue,
+                    @OfferStart,
+                    @OfferEnd
+                )
             `);
 
         const productId = result.recordset[0].ProductID;
 
+        // ==========================
+        // IMAGE SAVE
+        // ==========================
         if (imageBase64) {
+
             const buffer = Buffer.from(imageBase64, 'base64');
 
             await pool.request()
@@ -105,10 +234,12 @@ VALUES (@Name, @Description, @Price, @Stock, @CategoryID, @Barcode, @IsActive, @
 
 
 // ==========================
-// UPDATE PRODUCT (SMART UPDATE)
+// UPDATE PRODUCT
 // ==========================
 router.put('/:id', async (req, res) => {
+
     try {
+
         const { id } = req.params;
 
         const {
@@ -118,13 +249,27 @@ router.put('/:id', async (req, res) => {
             stock,
             category,
             barcode,
-            unitType,   // ✅ FIX 1: extract from body
+            unitType,
+            hasOffer,
+            offerType,
+            offerValue,
+            offerStart,
+            offerEnd,
             isActive,
             imageBase64,
             mimeType
         } = req.body;
 
         const pool = await poolPromise;
+
+        // ==========================
+        // OFFER SAFE UPDATE
+        // ==========================
+        const offer = normalizeOffer(
+            hasOffer,
+            offerStart,
+            offerEnd
+        );
 
         await pool.request()
             .input('ProductID', id)
@@ -134,8 +279,16 @@ router.put('/:id', async (req, res) => {
             .input('Stock', stock)
             .input('CategoryID', category)
             .input('Barcode', barcode)
-            .input('UnitType', unitType)   // ✅ FIX 2: pass param
+            .input('UnitType', unitType)
+
+            .input('HasOffer', offer.hasOffer)
+            .input('OfferType', offer.hasOffer ? offerType : null)
+            .input('OfferValue', offer.hasOffer ? offerValue : null)
+            .input('OfferStart', offer.offerStart)
+            .input('OfferEnd', offer.offerEnd)
+
             .input('IsActive', isActive)
+
             .query(`
                 UPDATE Products
                 SET Name = COALESCE(@Name, Name),
@@ -144,7 +297,14 @@ router.put('/:id', async (req, res) => {
                     Stock = COALESCE(@Stock, Stock),
                     CategoryID = COALESCE(@CategoryID, CategoryID),
                     Barcode = COALESCE(@Barcode, Barcode),
-                    UnitType = COALESCE(@UnitType, UnitType), -- ✅ FIX 3
+                    UnitType = COALESCE(@UnitType, UnitType),
+
+                    HasOffer = @HasOffer,
+                    OfferType = @OfferType,
+                    OfferValue = @OfferValue,
+                    OfferStart = @OfferStart,
+                    OfferEnd = @OfferEnd,
+
                     IsActive = COALESCE(@IsActive, IsActive)
                 WHERE ProductID = @ProductID
             `);
@@ -183,7 +343,9 @@ router.put('/:id', async (req, res) => {
 // DELETE
 // ==========================
 router.delete('/:id', async (req, res) => {
+
     try {
+
         const { id } = req.params;
         const pool = await poolPromise;
 

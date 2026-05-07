@@ -11,6 +11,7 @@ const Checkout = {
     grandTotal: 0,
     coupon: null,
     discountAmount: 0,
+    discountPercent: 0,
 
     /* ================= INIT ================= */
     async init() {
@@ -106,6 +107,7 @@ const Checkout = {
 
             this.discountAmount =
                 (this.subtotal * this.coupon.DiscountPercent) / 100;
+            this.discountPercent = this.coupon.DiscountPercent;
 
             this.calculate();
 
@@ -136,7 +138,7 @@ const Checkout = {
             <div class="summary-line"><span>VAT (${this.VAT}%)</span><span>${c} ${this.vatAmount.toFixed(2)}</span></div>
             <div class="summary-line"><span>Additional Charges (${this.EXTRA}%)</span><span>${c} ${this.extraAmount.toFixed(2)}</span></div>
             ${this.discountAmount > 0 ? `
-            <div class="summary-line discount"><span>Discount</span><span>- ${c} ${this.discountAmount.toFixed(2)}</span></div>
+            <div class="summary-line discount"><span>Discount (${this.discountPercent}%)</span><span>- ${c} ${this.discountAmount.toFixed(2)}</span></div>
             ` : ""}
             <div class="summary-total"><span>Grand Total</span><span>${c} ${this.grandTotal.toFixed(2)}</span></div>
         `;
@@ -149,7 +151,7 @@ const Checkout = {
             <div class="line"><span>Subtotal</span><span>${c} ${this.subtotal.toFixed(2)}</span></div>
             <div class="line"><span>VAT (${this.VAT}%)</span><span>${c} ${this.vatAmount.toFixed(2)}</span></div>
             <div class="line"><span>Additional</span><span>${c} ${this.extraAmount.toFixed(2)}</span></div>
-            <div class="line discount"><span>Discount</span><span>- ${c} ${(this.discountAmount || 0).toFixed(2)}</span></div>
+            <div class="line discount"><span>Discount (${this.discountPercent}%)</span><span>- ${c} ${(this.discountAmount || 0).toFixed(2)}</span></div>
             <hr>
             <div class="total"><span>Total</span><span>${c} ${this.grandTotal.toFixed(2)}</span></div>
         `;
@@ -300,7 +302,7 @@ const Checkout = {
             ${this.discountAmount > 0
                 ? `
                 <div class="summary-line discount">
-                    <span>Discount</span>
+                    <span>Discount (${this.discountPercent})%</span>
                     <span>- ${currency} ${this.discountAmount.toFixed(2)}</span>
                 </div>
                 `
@@ -510,7 +512,7 @@ const Checkout = {
                     </div>
 
                     <div class="line discount">
-                        <span>Discount</span>
+                        <span>Discount (${this.discountPercent}%)</span>
                         <span>- ${c} ${(this.discountAmount || 0).toFixed(2)}</span>
                     </div>
 
@@ -640,6 +642,7 @@ const Checkout = {
     },
 
     DiscountAmount: this.discountAmount,
+    DiscountPercent: this.discountPercent,
 
     CouponID: this.coupon?.CouponID || null,
     GrandTotal: this.grandTotal,

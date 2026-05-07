@@ -25,6 +25,7 @@ router.get('/', async (req, res) => {
                 ISNULL(o.AdditionalAmount, 0) AS AdditionalAmount,
 
                 ISNULL(o.DiscountAmount, 0) AS DiscountAmount,
+                ISNULL(o.DiscountPercent, 0) AS DiscountPercent,
                 ISNULL(o.TotalAmount, 0) AS Amount,
 
                 p.PaymentMethod,

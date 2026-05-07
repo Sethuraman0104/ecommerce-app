@@ -76,6 +76,7 @@ router.get("/:id/details", async (req, res) => {
                     o.AdditionalAmount,
 
                     o.DiscountAmount,
+                    o.DiscountPercent,
                     o.CouponID,
 
                     c.CustomerID,
@@ -103,6 +104,7 @@ router.get("/:id/details", async (req, res) => {
                     oi.ProductID,
                     p.Name AS ProductName,
                     oi.Quantity,
+                    p.UnitType,
                     oi.Price,
                     (oi.Quantity * oi.Price) AS LineTotal
                 FROM OrderItems oi
@@ -284,6 +286,7 @@ router.post("/full-create", async (req, res) => {
             VAT,
             AdditionalCharges,
             DiscountAmount,
+            DiscountPercent,
             CouponID,
             GrandTotal,
             PaymentMethod,
@@ -336,6 +339,7 @@ router.post("/full-create", async (req, res) => {
 
                 .input("CouponID", sql.Int, CouponID)
                 .input("DiscountAmount", sql.Decimal(18, 2), DiscountAmount || 0)
+                .input("DiscountPercent", sql.Decimal(5, 2), DiscountPercent)
 
                 .input("VATPercent", sql.Decimal(5, 2), vatPercent)
                 .input("VATAmount", sql.Decimal(18, 2), vatAmount)
@@ -354,6 +358,7 @@ router.post("/full-create", async (req, res) => {
 
                         CouponID,
                         DiscountAmount,
+                        DiscountPercent,
 
                         VATPercent,
                         VATAmount,
@@ -372,6 +377,7 @@ router.post("/full-create", async (req, res) => {
 
                         @CouponID,
                         @DiscountAmount,
+                        @DiscountPercent,
 
                         @VATPercent,
                         @VATAmount,

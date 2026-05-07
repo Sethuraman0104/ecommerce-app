@@ -140,12 +140,21 @@ body{
   align-items:center;
 }
 
+/* ================= CARD ================= */
 .card{
   width:380px;
   padding:40px;
 
   background:rgba(255,255,255,0.08);
+
+  /* FIX FOR DULL/FADED EFFECT */
   backdrop-filter:blur(25px);
+  -webkit-backdrop-filter:blur(25px);
+
+  isolation:isolate;
+  position:relative;
+
+  border:1px solid rgba(255,255,255,0.08);
 
   border-radius:20px;
   color:white;
@@ -159,40 +168,76 @@ body{
   margin:25px 0;
 }
 
+/* INPUT */
 .field input{
   width:100%;
   padding:14px 40px;
   border-radius:10px;
 
-  background:transparent;
+  background:rgba(255,255,255,0.03);
+
   border:1px solid rgba(255,255,255,0.2);
+
   color:white;
   outline:none;
+
+  transition:
+    border-color 0.3s,
+    background 0.3s,
+    box-shadow 0.3s;
+
+  position:relative;
+  z-index:2;
 }
 
+/* FIX INPUT FOCUS */
+.field input:focus{
+  border-color:#00d4ff;
+
+  background:rgba(255,255,255,0.06);
+
+  box-shadow:
+    0 0 0 1px rgba(0,212,255,0.3),
+    0 0 15px rgba(0,212,255,0.15);
+}
+
+/* LABEL */
 .field label{
   position:absolute;
   left:40px;
   top:50%;
   transform:translateY(-50%);
+
   opacity:0.6;
   transition:0.3s;
+
+  pointer-events:none;
+
+  z-index:3;
 }
 
+/* LEFT ICONS */
 .field i.fa-envelope,
 .field i.fa-lock{
   position:absolute;
   left:12px;
   top:50%;
   transform:translateY(-50%);
+
   opacity:0.6;
+
+  z-index:3;
 }
 
+/* PASSWORD TOGGLE */
 .toggle{
   position:absolute;
   right:12px;
   top:50%;
+  transform:translateY(-50%);
+
   cursor:pointer;
+  z-index:3;
 }
 
 /* FLOAT LABEL */
@@ -201,6 +246,19 @@ body{
   top:-8px;
   font-size:11px;
   color:#00d4ff;
+  opacity:1;
+}
+
+/* AUTOFILL FIX */
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus{
+  -webkit-text-fill-color:white;
+
+  transition:background-color 5000s ease-in-out 0s;
+
+  -webkit-box-shadow:
+    0 0 0px 1000px rgba(255,255,255,0.03) inset;
 }
 
 /* ================= BUTTON ================= */

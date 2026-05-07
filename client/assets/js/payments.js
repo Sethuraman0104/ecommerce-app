@@ -103,7 +103,7 @@ const Payments = {
 
         <div><b>Additional (${p.AdditionalPercent || 0}%):</b> ${symbol}${Number(p.AdditionalAmount || 0).toFixed(2)}</div>
 
-        <div><b>Discount:</b> -${symbol}${Number(p.DiscountAmount || 0).toFixed(2)}</div>
+        <div><b>Discount (${p.DiscountPercent || 0}%):</b> -${symbol}${Number(p.DiscountAmount || 0).toFixed(2)}</div>
 
         <hr>
 

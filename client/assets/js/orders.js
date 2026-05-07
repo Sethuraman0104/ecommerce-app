@@ -296,7 +296,7 @@ const Orders = {
         document.getElementById("ordItemsList").innerHTML =
             res.items.map(i => `
             <div class="ord-item">
-                <span>${i.ProductName} x${i.Quantity}</span>
+                <span>${i.ProductName} x${i.Quantity}/${i.UnitType}</span>
                 <b>${App.CURRENCY_SYMBOL}${i.LineTotal.toFixed(2)}</b>
             </div>
         `).join("");
@@ -323,7 +323,7 @@ const Orders = {
         </div>
 
         <div class="pay-line">
-            <b>Discount:</b> - ${currency}${(o.DiscountAmount || 0).toFixed(2)}
+            <b>Discount (${o.DiscountPercent || 0}%):</b> - ${currency}${(o.DiscountAmount || 0).toFixed(2)}
         </div>
 
         <hr>
@@ -451,7 +451,7 @@ ${o.AddressLine1 || ""}, ${o.City || ""}
 ${res.items.map(i => `
 <tr>
 <td>${i.ProductName}</td>
-<td class="right">${i.Quantity}</td>
+<td class="right">${i.Quantity} ${i.UnitType}</td>
 <td class="right">${currency}${parseFloat(i.Price).toFixed(2)}</td>
 <td class="right">${currency}${parseFloat(i.LineTotal).toFixed(2)}</td>
 </tr>
@@ -480,7 +480,7 @@ ${res.items.map(i => `
     </div>
 
     <div class="summary-row">
-        <span>Discount</span>
+        <span>Discount (${o.DiscountPercent || 0}%)</span>
         <span>- ${currency}${parseFloat(o.DiscountAmount || 0).toFixed(2)}</span>
     </div>
 

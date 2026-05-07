@@ -154,71 +154,96 @@
 
   </div>
 </div> -->
-
 <div id="productModal" class="modal-overlay">
 
   <div class="modal-box product-modal">
     <div class="modal-glow"></div>
 
-    <!-- HEADER -->
+    <!-- HEADER (FIXED) -->
     <div class="modal-header">
       <h3>🛒 Product Details</h3>
       <button class="close-btn" onclick="closeModal()">✖</button>
     </div>
 
-    <!-- FORM -->
-    <div class="form-grid">
+    <!-- SCROLLABLE CONTENT -->
+    <div class="modal-body">
 
-      <div class="modal-input">
-        <input id="name" placeholder="Product Name">
-      </div>
+      <div class="form-grid">
 
-      <div class="modal-input">
-        <select id="category"></select>
-      </div>
+        <div class="modal-input">
+          <input id="name" placeholder="Product Name">
+        </div>
 
-      <div class="modal-input">
-  <select id="unitType">
-    <option value="">Select Unit</option>
-    <option value="pcs">Pieces</option>
-    <option value="kg">Kilogram</option>
-    <option value="g">Gram</option>
-    <option value="ltr">Liter</option>
-    <option value="ml">Milliliter</option>
-    <option value="box">Box</option>
-  </select>
-</div>
+        <div class="modal-input">
+          <select id="category"></select>
+        </div>
 
-      <div class="modal-input">
-        <input id="price" type="number" placeholder="Price">
-      </div>
+        <div class="modal-input">
+          <select id="unitType">
+            <option value="">Select Unit</option>
+            <option value="pcs">Pieces</option>
+            <option value="kg">Kilogram</option>
+            <option value="g">Gram</option>
+            <option value="ltr">Liter</option>
+            <option value="ml">Milliliter</option>
+            <option value="box">Box</option>
+          </select>
+        </div>
 
-      <div class="modal-input">
-        <input id="stock" type="number" placeholder="Stock">
-      </div>
+        <div class="modal-input">
+          <input id="price" type="number" placeholder="Price">
+        </div>
 
-      <div class="modal-input full">
-        <textarea id="description" placeholder="Description"></textarea>
-      </div>
+        <div class="modal-input">
+          <input id="stock" type="number" placeholder="Stock">
+        </div>
 
-      <div class="modal-input">
-        <input id="barcode" placeholder="Barcode">
-      </div>
+        <div class="modal-input full">
+          <textarea id="description" placeholder="Description"></textarea>
+        </div>
 
-      <div class="modal-input file">
-        <input type="file" id="image" accept="image/*">
-      </div>
+        <div class="modal-input">
+          <input id="barcode" placeholder="Barcode">
+        </div>
 
-      <div class="checkbox-wrap full">
-        <label>
-          <input type="checkbox" id="isActive" checked>
-          <span>Active Product</span>
-        </label>
+        <div class="modal-input file">
+          <input type="file" id="image" accept="image/*">
+        </div>
+
+        <div class="checkbox-wrap full">
+          <label>
+            <input type="checkbox" id="isActive" checked>
+            <span>Active Product</span>
+          </label>
+        </div>
+
+        <!-- OFFER SECTION -->
+        <div class="offer-box full">
+
+          <label class="offer-check">
+            <input type="checkbox" id="hasOffer">
+            Product Has Special Offer
+          </label>
+
+          <select id="offerType">
+            <option value="">Offer Type</option>
+            <option value="PERCENT">Percentage %</option>
+            <option value="AMOUNT">Flat Amount</option>
+          </select>
+
+          <input type="number" id="offerValue" placeholder="Offer Value">
+
+          <!-- 🔥 NEW FIELDS -->
+          <input type="date" id="offerStart" placeholder="Offer Start Date">
+          <input type="date" id="offerEnd" placeholder="Offer End Date">
+
+        </div>
+
       </div>
 
     </div>
 
-    <!-- ACTIONS -->
+    <!-- FOOTER (FIXED) -->
     <div class="modal-actions">
       <button class="btn-send" onclick="saveProduct()">💾 Save</button>
       <button class="btn-close" onclick="closeModal()">Cancel</button>

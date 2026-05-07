@@ -36,8 +36,58 @@
     </div>
 </header>
 
+<!-- HERO BANNER -->
+<div class="hero-banner">
+    <img src="assets/banners/banner.png" class="hero-banner-img">
+
+    <!-- <div class="hero-banner-content">
+        <h1>Big Summer Deals</h1>
+        <p>Up to 70% OFF on selected products</p>
+
+        <button onclick="window.scrollTo({top:700,behavior:'smooth'})">
+            Shop Now
+        </button>
+    </div> -->
+</div>
+
 <!-- CATEGORY BAR -->
 <div id="categories" class="category-bar"></div>
+
+<!-- HERO BANNERS -->
+<div class="hero-slider">
+
+    <div class="hero-card hero-1">
+        <div class="hero-overlay"></div>
+
+        <div class="hero-content">
+            <h2>Big Summer Sale</h2>
+            <p>Up to 50% OFF on selected products</p>
+            <button onclick="window.scrollTo({top:700,behavior:'smooth'})">
+                Shop Now
+            </button>
+        </div>
+
+        <img src="assets/img/bucket.png">
+    </div>
+
+    <div class="hero-card hero-2">
+        <div class="hero-overlay"></div>
+
+        <div class="hero-content">
+            <h2>Fresh Grocery Deals</h2>
+            <p>Daily essentials at the best prices</p>
+            <button onclick="window.scrollTo({top:700,behavior:'smooth'})">
+                Explore
+            </button>
+        </div>
+
+        <img src="assets/img/bucketitems.png">
+    </div>
+
+</div>
+
+<!-- OFFER PRODUCTS -->
+<div id="offerProducts" class="offer-section"></div>
 
 <!-- PRODUCTS -->
 <div id="products" class="container"></div>
@@ -89,7 +139,7 @@
             <!-- QTY -->
             <div class="qty-box">
                 <button onclick="Shop.qty(-1)">−</button>
-                <input id="qty" type="number" value="1" min="1">
+                <input id="qty" type="number" value="1" min="1" readonly>
                 <button onclick="Shop.qty(1)">+</button>
             </div>
 

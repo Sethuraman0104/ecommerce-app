@@ -450,21 +450,111 @@ body {
   color: white;
 }
 
-/* TOGGLE */
-.toggle-btn {
-  margin-top: 8px;
-  width: 100%;
-  padding: 8px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  background: #0ea5e9;
-  color: white;
-  transition: 0.3s;
+/* ================= TOGGLE BUTTON ================= */
+.toggle-btn{
+  margin-top:12px;
+  width:100%;
+
+  padding:12px 14px;
+
+  border:none;
+  border-radius:14px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+
+  cursor:pointer;
+
+  color:white;
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:0.3px;
+
+  position:relative;
+  overflow:hidden;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
 }
 
-.toggle-btn:hover {
-  background: #0284c7;
+/* ICON */
+.toggle-btn i{
+  font-size:15px;
+  transition:0.3s ease;
+}
+
+/* SHINE EFFECT */
+.toggle-btn::before{
+  content:"";
+
+  position:absolute;
+  top:0;
+  left:-120%;
+
+  width:100%;
+  height:100%;
+
+  background:linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,255,255,0.25),
+    transparent
+  );
+
+  transition:0.6s;
+}
+
+/* HOVER SHINE */
+.toggle-btn:hover::before{
+  left:120%;
+}
+
+/* HOVER EFFECT */
+.toggle-btn:hover{
+  transform:translateY(-3px) scale(1.02);
+}
+
+/* CLICK EFFECT */
+.toggle-btn:active{
+  transform:scale(0.98);
+}
+
+/* ================= ACTIVATE ================= */
+.activate-btn{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  box-shadow:0 10px 25px rgba(34,197,94,0.25);
+}
+
+.activate-btn:hover{
+  box-shadow:
+    0 15px 35px rgba(34,197,94,0.4),
+    0 0 15px rgba(34,197,94,0.25);
+}
+
+/* ROTATE ICON */
+.activate-btn:hover i{
+  transform:rotate(-8deg) scale(1.15);
+}
+
+/* ================= DEACTIVATE ================= */
+.deactivate-btn{
+  background:linear-gradient(135deg,#ef4444,#dc2626);
+  box-shadow:0 10px 25px rgba(239,68,68,0.25);
+}
+
+.deactivate-btn:hover{
+  box-shadow:
+    0 15px 35px rgba(239,68,68,0.4),
+    0 0 15px rgba(239,68,68,0.25);
+}
+
+/* ICON ANIMATION */
+.deactivate-btn:hover i{
+  transform:rotate(10deg) scale(1.15);
 }
 
 /* FORM */
@@ -1248,264 +1338,6 @@ body {
   box-shadow: 0 10px 20px rgba(37,99,235,0.3);
 }
 
-/* ================= OVERLAY ================= */
-.modal-overlay{
-  position:fixed;
-  inset:0;
-  display:none;
-  justify-content:center;
-  align-items:center;
-
-  background:rgba(0,0,0,0.65);
-  backdrop-filter:blur(12px);
-
-  z-index:999;
-  animation:fadeIn 0.3s ease;
-}
-
-/* ================= MODAL BOX ================= */
-.modal-box{
-  position:relative;
-  width:650px;
-  max-height:90vh;
-
-  padding:28px;
-
-  border-radius:20px;
-
-  background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(25px);
-
-  box-shadow:0 40px 100px rgba(0,0,0,0.7);
-
-  color:white;
-
-  animation:popIn 0.35s ease;
-
-  overflow:hidden; /* ❗ IMPORTANT: remove outer scroll */
-}
-
-/* glowing border */
-.modal-glow{
-  position:absolute;
-  inset:-2px;
-  border-radius:20px;
-
-  background:linear-gradient(45deg,#00d4ff,#3b82f6,#8b5cf6,#00d4ff);
-  filter:blur(30px);
-  opacity:0.25;
-
-  z-index:-1;
-}
-
-/* ================= HEADER ================= */
-.modal-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:20px;
-}
-
-.modal-header h3{
-  font-size:22px;
-}
-
-.close-btn{
-  border:none;
-  background:rgba(255,255,255,0.1);
-  color:white;
-  padding:6px 10px;
-  border-radius:8px;
-  cursor:pointer;
-  transition:0.3s;
-}
-
-.close-btn:hover{
-  background:#ef4444;
-}
-
-/* ================= FORM GRID ================= */
-.form-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:15px;
-}
-
-.form-grid .full{
-  grid-column:span 2;
-}
-
-/* ================= INPUT ================= */
-.modal-input{
-  position:relative;
-}
-
-.modal-input input,
-.modal-input select,
-.modal-input textarea{
-  width:100%;
-  padding:12px;
-
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.2);
-
-  background:rgba(255,255,255,0.05);
-  color:white;
-
-  outline:none;
-  transition:0.3s;
-}
-
-/* textarea */
-.modal-input textarea{
-  min-height:90px;
-  resize:none;
-}
-
-/* focus effect */
-.modal-input input:focus,
-.modal-input select:focus,
-.modal-input textarea:focus{
-  border-color:#00d4ff;
-  box-shadow:0 0 10px rgba(0,212,255,0.4);
-}
-
-/* ================= FILE INPUT ================= */
-.modal-input.file input{
-  padding:8px;
-  cursor:pointer;
-}
-
-/* ================= CHECKBOX ================= */
-.checkbox-wrap{
-  display:flex;
-  align-items:center;
-}
-
-.checkbox-wrap label{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  cursor:pointer;
-}
-
-.checkbox-wrap input{
-  accent-color:#00d4ff;
-}
-
-/* ================= ACTIONS ================= */
-.modal-actions{
-  display:flex;
-  gap:12px;
-  margin-top:20px;
-}
-
-.btn-send{
-  flex:1;
-  padding:12px;
-
-  border:none;
-  border-radius:10px;
-
-  background:linear-gradient(90deg,#00d4ff,#2563eb);
-  color:white;
-
-  cursor:pointer;
-  transition:0.3s;
-}
-
-.btn-send:hover{
-  transform:translateY(-2px);
-  box-shadow:0 10px 25px rgba(0,212,255,0.35);
-}
-
-.btn-close{
-  flex:1;
-  padding:12px;
-
-  border:none;
-  border-radius:10px;
-
-  background:rgba(255,255,255,0.1);
-  color:white;
-
-  cursor:pointer;
-}
-
-/* ================= SCROLLBAR ================= */
-.modal-box::-webkit-scrollbar{
-  width:6px;
-}
-.modal-box::-webkit-scrollbar-thumb{
-  background:#00d4ff;
-  border-radius:10px;
-}
-
-/* ================= ANIMATIONS ================= */
-@keyframes popIn{
-  from{
-    transform:scale(0.85);
-    opacity:0;
-  }
-  to{
-    transform:scale(1);
-    opacity:1;
-  }
-}
-
-@keyframes fadeIn{
-  from{opacity:0}
-  to{opacity:1}
-}
-
-/* ================= RESPONSIVE ================= */
-@media(max-width:700px){
-  .modal-box{
-    width:95%;
-    padding:20px;
-  }
-
-  .form-grid{
-    grid-template-columns:1fr;
-  }
-
-  .form-grid .full{
-    grid-column:span 1;
-  }
-}
-
-/* SHOW MODAL */
-.modal-overlay.show{
-  display:flex;
-}
-
-/* =========================
-   FIX DROPDOWN VISIBILITY
-========================= */
-
-/* dropdown box */
-.modal-input select {
-  color: white;
-  background: rgba(0, 0, 0, 0.25);
-}
-
-/* dropdown options (IMPORTANT FIX) */
-.modal-input select option {
-  background: #1f2937;   /* dark background */
-  color: white;          /* visible text */
-}
-
-/* hover in dropdown (some browsers support) */
-.modal-input select option:hover {
-  background: #2563eb;
-  color: white;
-}
-
-/* placeholder-like first option */
-.modal-input select option[value=""] {
-  color: #9ca3af;
-}
-
 /* =========================
    TOAST CONTAINER
 ========================= */
@@ -1780,6 +1612,7 @@ body {
     border: 1px solid #e2e8f0;
     background: white;
     outline: none;
+    color: #000;
 }
 
 /* ================= TABLE ================= */
@@ -1862,26 +1695,7 @@ body {
 .ord-pay-pending{ background:#fff7ed; color:#f97316; }
 .ord-pay-failed{ background:#fef2f2; color:#dc2626; }
 
-/* =========================
-   MODERN SELECT
-========================= */
 
-.ord-status-select,
-.ord-select{
-    padding:8px 10px;
-    border-radius:12px;
-    border:1px solid #e2e8f0;
-    background:white;
-    outline:none;
-    transition:0.2s;
-    cursor:pointer;
-}
-
-.ord-status-select:hover,
-.ord-select:hover{
-    border-color:#2563eb;
-    box-shadow:0 0 0 3px rgba(37,99,235,0.1);
-}
 
 /* =========================
    VIEW BUTTON
@@ -2485,7 +2299,7 @@ body {
 
     border: 1px solid rgba(255,255,255,0.08);
     background: rgba(255,255,255,0.05);
-    color: white;
+    color: #007BDF;
     outline: none;
 }
 
@@ -2821,4 +2635,375 @@ body {
     padding:6px 0;
     border-bottom:1px solid #eee;
     font-size:13px;
+}
+
+
+/* ================= OVERLAY ================= */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  display:none;
+  justify-content:center;
+  align-items:center;
+
+  background:rgba(0,0,0,0.65);
+  backdrop-filter:blur(12px);
+
+  z-index:999;
+  animation:fadeIn 0.3s ease;
+}
+
+/* ================= MODAL BOX ================= */
+.modal-box{
+  position:relative;
+
+  width:650px;
+
+  /* FIX HEIGHT */
+  max-height:90vh;
+
+  padding:28px;
+
+  border-radius:20px;
+
+  background:rgba(255,255,255,0.08);
+
+  backdrop-filter:blur(25px);
+  -webkit-backdrop-filter:blur(25px);
+
+  box-shadow:0 40px 100px rgba(0,0,0,0.7);
+
+  color:white;
+
+  animation:popIn 0.35s ease;
+
+  /* IMPORTANT FIX */
+  overflow-y:auto;
+  overflow-x:hidden;
+
+  /* SMOOTH SCROLL */
+  scroll-behavior:smooth;
+}
+
+/* glowing border */
+.modal-glow{
+  position:absolute;
+  inset:-2px;
+  border-radius:20px;
+
+  background:linear-gradient(
+    45deg,
+    #00d4ff,
+    #3b82f6,
+    #8b5cf6,
+    #00d4ff
+  );
+
+  filter:blur(30px);
+  opacity:0.18;
+
+  z-index:-1;
+
+  pointer-events:none;
+}
+
+/* ================= HEADER ================= */
+.modal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.modal-header h3{
+  font-size:22px;
+}
+
+.close-btn{
+  border:none;
+  background:rgba(255,255,255,0.1);
+  color:white;
+  padding:6px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.close-btn:hover{
+  background:#ef4444;
+}
+
+/* ================= FORM GRID ================= */
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+}
+
+.form-grid .full{
+  grid-column:span 2;
+}
+
+/* ================= INPUT ================= */
+.modal-input{
+  position:relative;
+}
+
+.modal-input input,
+.modal-input select,
+.modal-input textarea{
+  width:100%;
+  padding:12px;
+
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.2);
+
+  background:rgba(255,255,255,0.05);
+  color:white;
+
+  outline:none;
+  transition:0.3s;
+}
+
+/* textarea */
+.modal-input textarea{
+  min-height:90px;
+  resize:none;
+}
+
+/* focus effect */
+.modal-input input:focus,
+.modal-input select:focus,
+.modal-input textarea:focus{
+  border-color:#00d4ff;
+  box-shadow:0 0 10px rgba(0,212,255,0.4);
+}
+
+/* ================= FILE INPUT ================= */
+.modal-input.file input{
+  padding:8px;
+  cursor:pointer;
+}
+
+/* ================= CHECKBOX ================= */
+.checkbox-wrap{
+  display:flex;
+  align-items:center;
+}
+
+.checkbox-wrap label{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+.checkbox-wrap input{
+  accent-color:#00d4ff;
+}
+
+/* FIX ACTION BUTTON STICKY BOTTOM */
+.modal-actions{
+  display:flex;
+  gap:12px;
+
+  margin-top:0px;
+
+  position:sticky;
+  bottom:0;
+
+  padding-top:15px;
+
+  background:linear-gradient(
+    to top,
+    rgba(15,23,42,0.95),
+    rgba(15,23,42,0.7),
+    transparent
+  );
+
+  backdrop-filter:blur(10px);
+
+  z-index:5;
+  isolation:isolate;
+}
+
+.btn-send{
+  flex:1;
+  padding:12px;
+
+  border:none;
+  border-radius:10px;
+
+  background:linear-gradient(90deg,#00d4ff,#2563eb);
+  color:white;
+
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.btn-send:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 25px rgba(0,212,255,0.35);
+}
+
+.btn-close{
+  flex:1;
+  padding:12px;
+
+  border:none;
+  border-radius:10px;
+
+  background:rgba(255,255,255,0.1);
+  color:white;
+
+  cursor:pointer;
+}
+
+/* ================= SCROLLBAR ================= */
+.modal-box::-webkit-scrollbar{
+  width:6px;
+}
+.modal-box::-webkit-scrollbar-thumb{
+  background:#00d4ff;
+  border-radius:10px;
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes popIn{
+  from{
+    transform:scale(0.85);
+    opacity:0;
+  }
+  to{
+    transform:scale(1);
+    opacity:1;
+  }
+}
+
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+/* ================= RESPONSIVE ================= */
+@media(max-width:700px){
+  .modal-box{
+    max-height:95vh;
+    padding-bottom:30px;
+  }
+
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .form-grid .full{
+    grid-column:span 1;
+  }
+}
+
+/* SHOW MODAL */
+.modal-overlay.show{
+  display:flex;
+}
+
+/* =========================
+   FIX DROPDOWN VISIBILITY
+========================= */
+
+/* dropdown box */
+.modal-input select {
+  color: white;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* dropdown options (IMPORTANT FIX) */
+.modal-input select option {
+  background: #1f2937;   /* dark background */
+  color: white;          /* visible text */
+}
+
+/* hover in dropdown (some browsers support) */
+.modal-input select option:hover {
+  background: #2563eb;
+  color: white;
+}
+
+/* placeholder-like first option */
+.modal-input select option[value=""] {
+  color: #9ca3af;
+}
+
+.price-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin:10px 0;
+}
+
+.old-price{
+  text-decoration:line-through;
+  opacity:0.5;
+  font-size:13px;
+}
+
+.offer-price{
+  font-size:22px;
+  font-weight:700;
+  color:#22c55e;
+}
+
+.offer-badge{
+  width:max-content;
+  padding:4px 10px;
+
+  border-radius:30px;
+
+  background:linear-gradient(135deg,#ef4444,#dc2626);
+
+  color:white;
+  font-size:11px;
+  font-weight:700;
+
+  box-shadow:0 10px 20px rgba(239,68,68,0.25);
+}
+
+.offer-box{
+  margin-top:15px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.offer-box input,
+.offer-box select{
+  padding:10px;
+  border-radius:10px;
+}
+
+.offer-check{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* ================= HIDE SCROLLBAR (MODERN CLEAN UI) ================= */
+
+/* Chrome, Edge, Safari */
+.modal-box::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* Firefox */
+.modal-box {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.offer-dates{
+  margin-top:5px;
+  font-size:14px;
+  opacity:0.8;
+  color:#007BDF;
+  font-weight: bold;
 }

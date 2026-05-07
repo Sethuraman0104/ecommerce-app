@@ -427,3 +427,16 @@ AdditionalAmount DECIMAL(18,2) NULL;
 ALTER TABLE Orders
 ADD 
     SubTotal DECIMAL(18,2) DEFAULT 0
+
+************** 07/05/206 - In Office *************************
+ALTER TABLE Orders
+ADD 
+    DiscountPercent DECIMAL(5,2) NULL
+
+ALTER TABLE Products
+ADD
+    HasOffer bit DEFAULT 0,
+    OfferType nvarchar(20) NULL,      -- PERCENT / AMOUNT
+    OfferValue decimal(18,2) NULL,   -- 10 or 5.000
+    OfferStart datetime NULL,
+    OfferEnd datetime NULL;
