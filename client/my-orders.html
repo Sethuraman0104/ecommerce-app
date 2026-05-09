@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">Loading...</title>
+
+<link id="appFavicon" rel="icon" href="assets/logo.png">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+
+body{
+    margin:0;
+    font-family:Segoe UI,sans-serif;
+    background:linear-gradient(135deg,#eef2ff,#f8fafc);
+}
+
+/* TOPBAR */
+.topbar{
+    position:sticky;
+    top:0;
+    z-index:1000;
+    display:flex;
+    justify-content:space-between;
+    padding:14px 20px;
+    background:rgba(255,255,255,0.85);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid #eee;
+}
+
+.brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.brand img{
+    height:38px;
+}
+
+.brand span{
+    font-weight:900;
+}
+
+.user-chip{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 14px;
+    border-radius:999px;
+    background:#eef2ff;
+    font-weight:700;
+}
+
+/* PAGE */
+.orders-page{
+    max-width:1200px;
+    margin:auto;
+    padding:25px;
+}
+
+.orders-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:18px;
+}
+
+/* CARD */
+.order-card{
+    background:white;
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.06);
+    transition:0.25s;
+}
+
+.order-card:hover{
+    transform:translateY(-3px);
+}
+
+.badge{
+    font-size:11px;
+    font-weight:900;
+    padding:5px 10px;
+    border-radius:999px;
+}
+
+.pending{
+    background:#fff7ed;
+    color:#c2410c;
+}
+
+.delivered{
+    background:#ecfdf5;
+    color:#047857;
+}
+
+.cancelled{
+    background:#fef2f2;
+    color:#b91c1c;
+}
+
+.processing{
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
+.shipped{
+    background:#ede9fe;
+    color:#5b21b6;
+}
+
+.total{
+    font-size:22px;
+    font-weight:900;
+    margin-top:12px;
+    color:#0f172a;
+}
+
+.btn{
+    margin-top:14px;
+    width:100%;
+    padding:11px;
+    border:none;
+    border-radius:10px;
+    background:#2563eb;
+    color:white;
+    font-weight:800;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.btn:hover{
+    background:#1d4ed8;
+}
+
+/* MODAL */
+.modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    justify-content:center;
+    align-items:center;
+    background:rgba(0,0,0,0.65);
+    z-index:99999;
+    padding:20px;
+}
+
+.modal-box{
+    width:92%;
+    max-width:850px;
+    background:white;
+    border-radius:18px;
+    overflow:hidden;
+    animation:pop .2s ease;
+    box-shadow:0 20px 60px rgba(0,0,0,0.2);
+}
+
+@keyframes pop{
+    from{
+        transform:scale(.92);
+        opacity:0;
+    }
+    to{
+        transform:scale(1);
+        opacity:1;
+    }
+}
+
+.modal-header{
+    position:sticky;
+    top:0;
+    z-index:5;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:16px 18px;
+    background:#f8fafc;
+    border-bottom:1px solid #eee;
+    font-weight:900;
+}
+
+.close{
+    cursor:pointer;
+    font-size:20px;
+}
+
+.modal-body{
+    padding:18px;
+    max-height:75vh;
+    overflow:auto;
+}
+
+/* SECTION */
+.section{
+    margin-bottom:16px;
+    padding:14px;
+    border-radius:14px;
+    border:1px solid #eee;
+    background:#fafafa;
+}
+
+.title{
+    font-size:13px;
+    font-weight:900;
+    margin-bottom:10px;
+    color:#0f172a;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+}
+
+.row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+    font-size:13px;
+    border-bottom:1px dashed #e5e7eb;
+}
+
+.row:last-child{
+    border-bottom:none;
+}
+
+.item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+    font-size:13px;
+    border-bottom:1px dashed #e5e7eb;
+}
+
+.item:last-child{
+    border-bottom:none;
+}
+
+.grand-total{
+    font-size:15px;
+    font-weight:900;
+    color:#111827;
+}
+
+.discount{
+    color:#dc2626;
+}
+
+.empty{
+    text-align:center;
+    padding:70px 20px;
+    background:white;
+    border-radius:16px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.06);
+}
+
+.empty i{
+    font-size:50px;
+    color:#cbd5e1;
+    margin-bottom:15px;
+}
+
+.empty h3{
+    margin:0;
+    color:#0f172a;
+}
+
+.empty p{
+    color:#64748b;
+    margin-top:8px;
+}
+
+@media(max-width:700px){
+
+    .topbar{
+        padding:12px 14px;
+    }
+
+    .orders-page{
+        padding:15px;
+    }
+
+    .orders-grid{
+        grid-template-columns:1fr;
+    }
+
+    .modal-box{
+        width:100%;
+    }
+}
+
+.page-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:15px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+}
+
+.back-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:12px 18px;
+    border-radius:12px;
+    background:#2563eb;
+    color:#fff;
+    text-decoration:none;
+    font-weight:800;
+    transition:.2s;
+    box-shadow:0 8px 20px rgba(37,99,235,.25);
+}
+
+.back-btn:hover{
+    background:#1d4ed8;
+    transform:translateY(-2px);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <div class="brand">
+        <img id="logo" src="assets/logo.png">
+        <span id="companyName">Shop</span>
+    </div>
+
+    <div class="user-chip">
+        <i class="fa fa-user"></i>
+        <span id="userName">Guest</span>
+    </div>
+
+</header>
+
+<div class="orders-page">
+
+   <div class="page-header">
+
+    <h2 style="margin:0;">
+        <i class="fa fa-bag-shopping"></i>
+        My Orders
+    </h2>
+
+    <a href="index.html" class="back-btn">
+        <i class="fa fa-arrow-left"></i>
+        Continue Shopping
+    </a>
+
+</div>
+
+    <div id="ordersList" class="orders-grid"></div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+            <span id="mTitle">Order</span>
+            <span class="close" onclick="closeModal()">✕</span>
+        </div>
+
+        <div class="modal-body" id="mBody"></div>
+
+    </div>
+
+</div>
+
+<script src="assets/js/customer-common.js"></script>
+
+<script>
+
+let TOKEN, SETTINGS, CUSTOMER, ORDERS = [];
+
+/* INIT */
+async function init(){
+
+    await CustomerApp.init();
+
+    TOKEN = localStorage.getItem("token");
+
+    CUSTOMER =
+        JSON.parse(localStorage.getItem("customer") || "{}");
+
+    SETTINGS = CustomerApp.SETTINGS || {};
+
+    console.log("SETTINGS", SETTINGS);
+
+    /* =========================
+       COMPANY NAME
+    ========================== */
+
+    const companyName =
+        SETTINGS?.CompanyName ||
+        SETTINGS?.company_name ||
+        SETTINGS?.StoreName ||
+        SETTINGS?.AppName ||
+        "Shop";
+
+    const companyNameEl =
+        document.getElementById("companyName");
+
+    if(companyNameEl){
+        companyNameEl.innerText = companyName;
+    }
+
+    /* =========================
+       USER
+    ========================== */
+
+    const userNameEl =
+        document.getElementById("userName");
+
+    if(userNameEl){
+        userNameEl.innerText =
+            CUSTOMER?.FullName || "User";
+    }
+
+    /* =========================
+       PAGE TITLE
+    ========================== */
+
+    document.title =
+        `${companyName} - My Orders`;
+
+    /* =========================
+       LOGO
+    ========================== */
+
+    const logo =
+        SETTINGS?.CompanyLogo ||
+        SETTINGS?.Logo ||
+        SETTINGS?.LogoPath ||
+        SETTINGS?.companyLogo ||
+        SETTINGS?.logo ||
+        "assets/logo.png";
+
+    console.log("LOGO PATH", logo);
+
+    const logoEl =
+        document.getElementById("logo");
+
+    if(logoEl){
+        logoEl.src = logo;
+
+        logoEl.onerror = function(){
+            this.src = "assets/logo.png";
+        };
+    }
+
+    const faviconEl =
+        document.getElementById("appFavicon");
+
+    if(faviconEl){
+        faviconEl.href = logo;
+    }
+
+    /* =========================
+       CURRENCY FIX
+    ========================== */
+
+    if(CustomerApp?.CURRENCY_SYMBOL){
+
+        SETTINGS.CurrencySymbol =
+            CustomerApp.CURRENCY_SYMBOL;
+
+        localStorage.setItem(
+            "CurrencySymbol",
+            CustomerApp.CURRENCY_SYMBOL
+        );
+    }
+
+    console.log(
+        "FINAL CURRENCY",
+        SETTINGS.CurrencySymbol
+    );
+
+    await load();
+}
+
+/* LOAD */
+async function load(){
+
+    try{
+
+        const res = await fetch(
+            `${CustomerApp.API_BASE}/orders/my-orders`,
+            {
+                headers:{
+                    Authorization:`Bearer ${TOKEN}`
+                }
+            }
+        );
+
+        if(res.status === 401){
+
+    localStorage.removeItem("token");
+
+    CustomerApp.toast(
+        "Session expired. Please login again.",
+        "error"
+    );
+
+    setTimeout(()=>{
+
+        window.location.href = "login.html";
+
+    },1200);
+
+    return;
+}
+
+        ORDERS = await res.json();
+console.log("ORDERS", ORDERS);
+        render();
+
+    }catch(err){
+
+        console.error(err);
+
+        CustomerApp.toast(
+            "Failed to load orders",
+            "error"
+        );
+    }
+}
+
+function currency(){
+
+    const symbol =
+        SETTINGS?.CurrencySymbol ||
+        SETTINGS?.currencySymbol ||
+        CustomerApp?.SETTINGS?.CurrencySymbol ||
+        CustomerApp?.CURRENCY_SYMBOL ||
+        localStorage.getItem("CurrencySymbol");
+
+    return symbol && symbol.trim()
+        ? symbol.trim()
+        : "BHD";
+}
+
+function money(v){
+
+    const amount = parseFloat(v);
+
+    return `${currency()} ${
+        isNaN(amount)
+            ? "0.00"
+            : amount.toFixed(2)
+    }`;
+}
+
+/* RENDER */
+function render(){
+
+    const box =
+        document.getElementById("ordersList");
+
+    if(!ORDERS || !ORDERS.length){
+
+        box.innerHTML = `
+            <div class="empty">
+                <i class="fa fa-box-open"></i>
+                <h3>No Orders Found</h3>
+                <p>Your orders will appear here.</p>
+            </div>
+        `;
+
+        return;
+    }
+
+    box.innerHTML = ORDERS.map(o=>`
+
+        <div class="order-card">
+
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <b>#${o.OrderID}</b>
+
+                <span class="badge ${getStatus(o.Status)}">
+                    ${o.Status || "Processing"}
+                </span>
+            </div>
+
+            <div style="font-size:12px;color:#666;margin-top:8px;">
+                <i class="fa fa-calendar"></i>
+                ${new Date(o.CreatedAt).toLocaleString()}
+            </div>
+
+            <div class="total">
+    ${money(
+        o.GrandTotal ||
+        o.TotalAmount ||
+        o.Total ||
+        o.SubTotal ||
+        0
+    )}
+</div>
+
+            <button
+                class="btn"
+                onclick="openOrder(${o.OrderID})">
+
+                <i class="fa fa-eye"></i>
+                View Details
+
+            </button>
+
+        </div>
+
+    `).join("");
+}
+
+/* OPEN MODAL */
+/* OPEN MODAL */
+async function openOrder(id){
+
+    try{
+
+        const res = await fetch(
+            `${CustomerApp.API_BASE}/orders/${id}/details`,
+            {
+                headers:{
+                    Authorization:`Bearer ${TOKEN}`
+                }
+            }
+        );
+
+        if(res.status === 401){
+
+    localStorage.removeItem("token");
+
+    CustomerApp.toast(
+        "Session expired. Please login again.",
+        "error"
+    );
+
+    setTimeout(()=>{
+
+        window.location.href = "login.html";
+
+    },1200);
+
+    return;
+}
+
+        const data = await res.json();
+
+        console.log("ORDER DETAILS", data);
+
+        const o = data.order || {};
+
+        document.getElementById("mTitle").innerText =
+            `Order #${o.OrderID}`;
+
+        document.getElementById("mBody").innerHTML = `
+
+            <!-- CUSTOMER -->
+            <div class="section">
+
+                <div class="title">
+                    Customer Information
+                </div>
+
+                <div class="row">
+                    <span>Name</span>
+                    <b>${o.FullName || "-"}</b>
+                </div>
+
+                <div class="row">
+                    <span>Phone</span>
+                    <b>${o.Phone || "-"}</b>
+                </div>
+
+                <div class="row">
+                    <span>Email</span>
+                    <b>${o.Email || "-"}</b>
+                </div>
+
+                <div class="row">
+                    <span>City</span>
+                    <b>${o.City || "-"}</b>
+                </div>
+
+                <div class="row">
+                    <span>Country</span>
+                    <b>${o.Country || "-"}</b>
+                </div>
+
+            </div>
+
+            <!-- ITEMS -->
+            <div class="section">
+
+                <div class="title">
+                    Ordered Items
+                </div>
+
+                ${(data.items || []).map(i=>`
+
+                    <div class="item">
+
+                        <div>
+                            <div style="font-weight:700;">
+                                ${i.ProductName || "-"}
+                            </div>
+
+                            <div style="
+                                font-size:12px;
+                                color:#64748b;
+                                margin-top:3px;
+                            ">
+                                Qty:
+                                ${i.Quantity || 0}
+
+                                ${i.UnitType || "pcs"}
+                            </div>
+                        </div>
+
+                        <b>
+                            ${money(i.LineTotal)}
+                        </b>
+
+                    </div>
+
+                `).join("")}
+
+            </div>
+
+            <!-- PAYMENT -->
+            <div class="section">
+
+                <div class="title">
+                    Payment Information
+                </div>
+
+                <div class="row">
+                    <span>Method</span>
+                    <b>
+                        ${data.payment?.PaymentMethod || "-"}
+                    </b>
+                </div>
+
+                <div class="row">
+                    <span>Payment Status</span>
+                    <b>
+                        ${data.payment?.PaymentStatus || "-"}
+                    </b>
+                </div>
+
+                <div class="row">
+                    <span>Transaction ID</span>
+                    <b>
+                        ${data.payment?.TransactionID || "-"}
+                    </b>
+                </div>
+
+            </div>
+
+            <!-- SUMMARY -->
+            <div class="section">
+
+                <div class="title">
+                    Payment Summary
+                </div>
+
+                <!-- SUBTOTAL -->
+                <div class="row">
+                    <span>Subtotal</span>
+
+                    <b>
+                        ${money(
+                            o.SubTotal || 0
+                        )}
+                    </b>
+                </div>
+
+                <!-- VAT -->
+                <div class="row">
+
+                    <span>
+                        VAT
+                        ${o.VATPercent
+                            ? `(${o.VATPercent}%)`
+                            : ""
+                        }
+                    </span>
+
+                    <b>
+                        ${money(
+                            o.VATAmount || 0
+                        )}
+                    </b>
+
+                </div>
+
+                <!-- ADDITIONAL -->
+                <div class="row">
+
+                    <span>
+                        Additional Charges
+                        ${o.AdditionalPercent
+                            ? `(${o.AdditionalPercent}%)`
+                            : ""
+                        }
+                    </span>
+
+                    <b>
+                        ${money(
+                            o.AdditionalAmount || 0
+                        )}
+                    </b>
+
+                </div>
+
+                <!-- DISCOUNT -->
+                <div class="row discount">
+
+                    <span>
+                        Discount
+                        ${o.DiscountPercent
+                            ? `(${o.DiscountPercent}%)`
+                            : ""
+                        }
+                    </span>
+
+                    <b>
+                        - ${money(
+                            o.DiscountAmount || 0
+                        )}
+                    </b>
+
+                </div>
+
+                <!-- GRAND TOTAL -->
+                <div class="row grand-total">
+
+                    <span>
+                        Grand Total
+                    </span>
+
+                    <b>
+                        ${money(
+                            o.TotalAmount || 0
+                        )}
+                    </b>
+
+                </div>
+
+            </div>
+
+        `;
+
+        document.getElementById("modal").style.display =
+            "flex";
+
+    }catch(err){
+
+        console.error(err);
+
+        CustomerApp.toast(
+            "Failed to load order details",
+            "error"
+        );
+    }
+}
+
+/* CLOSE */
+function closeModal(){
+
+    document.getElementById("modal").style.display =
+        "none";
+}
+
+/* CLOSE ON BACKDROP */
+document.getElementById("modal")
+.addEventListener("click", function(e){
+
+    if(e.target.id === "modal"){
+        closeModal();
+    }
+});
+
+/* STATUS */
+function getStatus(s){
+
+    s = (s || "").toLowerCase();
+
+    if(s.includes("pending"))
+        return "pending";
+
+    if(s.includes("delivered"))
+        return "delivered";
+
+    if(s.includes("cancel"))
+        return "cancelled";
+
+    if(s.includes("shipped"))
+        return "shipped";
+
+    return "processing";
+}
+
+/* START */
+init();
+
+</script>
+
+</body>
+</html>

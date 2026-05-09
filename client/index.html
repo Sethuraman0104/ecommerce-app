@@ -14,7 +14,6 @@
 </head>
 
 <body>
-
 <!-- HEADER -->
 <header class="topbar">
     <div class="brand">
@@ -27,13 +26,174 @@
         <i class="fa fa-search"></i>
         <input id="search" placeholder="Search products...">
     </div>
+<!-- =========================================
+     ALL CATEGORIES MENU
+========================================= -->
 
-    <div class="actions">
-        <button class="icon-btn" onclick="UI.openCart()">
-            <i class="fa fa-cart-shopping"></i>
-            <span class="badge">0</span>
-        </button>
+<div class="top-categories">
+
+    <!-- MAIN BUTTON -->
+    <button class="all-cat-btn"
+            onclick="toggleCategoryMenu()">
+
+        <i class="fa fa-bars"></i>
+
+        <span>All Categories</span>
+
+        <i class="fa fa-chevron-down small-arrow"></i>
+
+    </button>
+
+    <!-- DROPDOWN -->
+    <div class="all-cat-dropdown"
+         id="topCategoryLinks">
+
+        <!-- ALL -->
+        <div class="all-cat-item active"
+             onclick="filterCat(null, this)">
+
+            <div class="cat-icon">
+                <i class="fa fa-layer-group"></i>
+            </div>
+
+            <span>All Products</span>
+
+        </div>
+
+        <!-- DYNAMIC -->
+        <div id="dynamicTopCategories"></div>
+
     </div>
+
+</div>
+
+<div class="actions">
+
+   <!-- CUSTOMER MENU -->
+<div class="customer-menu">
+
+    <!-- MAIN BUTTON -->
+    <button id="authBtn"
+            class="customer-btn"
+            onclick="Auth.toggleMenu(event)">
+
+        <div class="customer-avatar">
+            <i class="fa fa-user"></i>
+        </div>
+
+        <div class="customer-info">
+
+            <span class="customer-label">
+                Account
+            </span>
+
+            <span id="authBtnText"
+                  class="customer-name">
+
+                Sign In
+
+            </span>
+
+        </div>
+
+        <i class="fa fa-chevron-down customer-arrow"></i>
+
+    </button>
+
+    <!-- DROPDOWN -->
+    <div id="customerDropdown"
+         class="customer-dropdown">
+
+       <div id="guestMenu" class="guest-menu">
+
+    <button class="dropdown-btn signin-item"
+            onclick="Auth.open()">
+
+        <div class="menu-icon login-icon">
+            <i class="fa fa-user-lock"></i>
+        </div>
+
+        <div class="menu-text">
+            <span>Sign In</span>
+            <small>Access your account</small>
+        </div>
+
+        <i class="fa fa-chevron-right menu-arrow"></i>
+
+    </button>
+
+    <button class="dropdown-btn register-item"
+            onclick="Auth.openRegister()">
+
+        <div class="menu-icon register-icon">
+            <i class="fa fa-user-plus"></i>
+        </div>
+
+        <div class="menu-text">
+            <span>Create Account</span>
+            <small>Register new profile</small>
+        </div>
+
+        <i class="fa fa-chevron-right menu-arrow"></i>
+
+    </button>
+
+</div>
+
+        <div id="loggedMenu"
+     class="logged-menu"
+     style="display:none;">
+
+    <!-- MY ORDERS -->
+    <button class="dropdown-btn signin-item"
+            onclick="location.href='my-orders.html'">
+
+        <div class="menu-icon orders-icon">
+            <i class="fa fa-bag-shopping"></i>
+        </div>
+
+        <div class="menu-text">
+            <span>My Orders</span>
+            <small>Track your purchases</small>
+        </div>
+
+        <i class="fa fa-chevron-right menu-arrow"></i>
+
+    </button>
+
+    <!-- LOGOUT -->
+    <button class="dropdown-btn register-item"
+            onclick="Auth.logout()">
+
+        <div class="menu-icon logout-icon">
+            <i class="fa fa-right-from-bracket"></i>
+        </div>
+
+        <div class="menu-text">
+            <span>Logout</span>
+            <small>Securely sign out</small>
+        </div>
+
+        <i class="fa fa-chevron-right menu-arrow"></i>
+
+    </button>
+
+</div>
+
+    </div>
+
+</div>
+    <!-- CART -->
+    <button class="icon-btn"
+            onclick="UI.openCart()">
+
+        <i class="fa fa-cart-shopping"></i>
+
+        <span class="badge">0</span>
+
+    </button>
+
+</div>
 </header>
 
 <!-- HERO BANNER -->
@@ -49,9 +209,6 @@
         </button>
     </div> -->
 </div>
-
-<!-- CATEGORY BAR -->
-<div id="categories" class="category-bar"></div>
 
 <!-- HERO BANNERS -->
 <div class="hero-slider">
@@ -86,6 +243,9 @@
 
 </div>
 
+<!-- CATEGORY BAR -->
+<div id="categories" class="category-bar"></div>
+
 <!-- OFFER PRODUCTS -->
 <div id="offerProducts" class="offer-section"></div>
 
@@ -109,6 +269,7 @@
         <div class="cart-footer">
             <div id="cartTotal">0</div>
             <button class="checkout" onclick="CustomerApp.goToCheckout()">
+                <i class="fa fa-credit-card"></i>
     Checkout
 </button>
         </div>
@@ -149,40 +310,135 @@
 
         <!-- FOOTER -->
         <div class="modal-footer">
-            <button class="btn-primary" onclick="Shop.add()">Add to Cart</button>
+            <button class="btn-primary" onclick="Shop.add()"><i class="fa fa-cart-plus"></i> Add to Cart</button>
         </div>
 
     </div>
 </div>
 
-<!-- LOGIN MODAL -->
+<!-- AUTH MODAL -->
 <div id="authModal" class="modal">
-    <div class="modal-card">
 
+    <div class="modal-card auth-card">
+
+        <!-- HEADER -->
         <div class="modal-header">
-            <h3>Login / Register</h3>
-            <button class="modal-close" onclick="Auth.close()">✕</button>
+
+            <h3 id="authTitle">
+                Customer Login
+            </h3>
+
+            <button class="modal-close"
+                    onclick="Auth.close()">
+                ✕
+            </button>
+
         </div>
 
-        <div class="modal-body">
+        <!-- BODY -->
+        <div class="modal-body auth-body">
 
-            <input id="email" placeholder="Email">
-            <input id="password" type="password" placeholder="Password">
-            <input id="name" placeholder="Full Name (for register)">
+            <input id="authName"
+                   placeholder="Full Name"
+                   style="display:none;">
 
-            <button class="btn-primary" onclick="Auth.login()">Login</button>
-            <button class="btn-secondary" onclick="Auth.register()">Register</button>
+            <input id="authEmail"
+                   type="email"
+                   placeholder="Email Address">
 
-            <hr>
+            <input id="authPassword"
+                   type="password"
+                   placeholder="Password">
 
+            <!-- LOGIN -->
+            <button id="loginBtn"
+                    class="btn-primary"
+                    onclick="Auth.login()">
+
+                <i class="fa fa-right-to-bracket"></i>
+
+                Login & Continue
+
+            </button>
+
+            <!-- REGISTER -->
+            <button id="registerBtn"
+                    class="btn-secondary"
+                    onclick="Auth.register()"
+                    style="display:none;">
+
+                <i class="fa fa-user-plus"></i>
+
+                Create Account
+
+            </button>
+
+            <!-- FORGOT -->
+            <button class="link-btn"
+                    onclick="Auth.forgotPassword()">
+
+                Forgot Password?
+
+            </button>
+
+            <!-- TOGGLE -->
+            <div class="auth-switch">
+
+                <span id="authSwitchText">
+                    New customer?
+                </span>
+
+                <a href="javascript:void(0)"
+                   onclick="Auth.toggleMode()"
+                   id="authSwitchBtn">
+
+                    Create Account
+
+                </a>
+
+            </div>
+
+            <div class="auth-divider">
+                OR
+            </div>
+
+            <!-- GOOGLE -->
             <a href="http://localhost:5000/api/customer-auth/google"
-               class="btn-primary"
-               style="display:block;text-align:center;">
-               Continue with Google
+               class="google-btn">
+
+                <i class="fa-brands fa-google"></i>
+
+                Continue with Google
+
             </a>
 
         </div>
+
     </div>
+
+</div>
+<div id="toast"></div>
+<!-- FLOATING ACTION BUTTONS -->
+<div id="floatingActions" class="floating-actions">
+
+    <!-- VIEW CART -->
+    <button class="floating-action cart-action"
+            onclick="UI.openCart()">
+
+        <i class="fa fa-cart-shopping"></i>
+
+        <span id="floatingCartCount">0</span>
+
+    </button>
+
+    <!-- CHECKOUT -->
+    <button class="floating-action checkout-action"
+            onclick="CustomerApp.goToCheckout()">
+
+        <i class="fa fa-credit-card"></i>
+
+    </button>
+
 </div>
 
 <script src="assets/js/customer-common.js"></script>

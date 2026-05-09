@@ -18,28 +18,27 @@ const CustomerApp = {
     // ==========================
     // INIT
     // ==========================
-    init() {
+    async init() {
 
-        this.READY_PROMISE = new Promise((resolve) => {
-            this.READY_RESOLVE = resolve;
-        });
+    this.READY_PROMISE = new Promise((resolve) => {
+        this.READY_RESOLVE = resolve;
+    });
 
-        this.handleGoogleRedirectToken(); // ✅ NEW
+    this.handleGoogleRedirectToken();
 
-        Promise.all([
-            this.loadCompany(),
-            this.loadSettings()
-        ]).then(() => {
+    await Promise.all([
+        this.loadCompany(),
+        this.loadSettings()
+    ]);
 
-            this.READY = true;
+    this.READY = true;
 
-            if (this.READY_RESOLVE) {
-                this.READY_RESOLVE();
-            }
+    if (this.READY_RESOLVE) {
+        this.READY_RESOLVE();
+    }
 
-            console.log("🟢 Customer App Ready");
-        });
-    },
+    console.log("🟢 Customer App Ready");
+},
 
     // ==========================
     // GOOGLE REDIRECT LOGIN HANDLER
@@ -223,13 +222,17 @@ const CustomerApp = {
     // ==========================
     goToCheckout() {
 
-    if (!this.isLoggedIn()) {
-        window.location.href =
-            "/login.html?redirect=checkout.html";
+    const token =
+        localStorage.getItem("token");
+
+    if (!token) {
+
+        Auth.open();
+
         return;
     }
 
-    window.location.href = "/checkout.html";
+    location.href = "checkout.html";
 },
 
     // ==========================
@@ -263,14 +266,27 @@ const CustomerApp = {
         document.body.appendChild(container);
     }
 
-    container.innerText = message;
+    // create toast card
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
 
-    // reset classes properly
-    container.className = "";
-    container.classList.add(type, "show");
+    const icon =
+        type === "success" ? "fa-check-circle" :
+        type === "error" ? "fa-circle-xmark" :
+        type === "warning" ? "fa-triangle-exclamation" :
+        "fa-circle-info";
 
+    toast.innerHTML = `
+        <i class="fa ${icon}"></i>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // auto remove with animation
     setTimeout(() => {
-        container.classList.remove("show");
-    }, 3000);
+        toast.style.animation = "toastOut 0.3s ease forwards";
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
 }
 };

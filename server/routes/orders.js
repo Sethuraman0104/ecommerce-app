@@ -64,6 +64,7 @@ router.get("/:id/details", async (req, res) => {
                 SELECT 
                     o.OrderID,
                     o.TotalAmount,
+                    o.SubTotal,
                     o.Status,
                     o.CreatedAt,
                     o.CustomerRemarks,
@@ -443,6 +444,84 @@ router.post("/full-create", async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+router.get("/my-orders", async (req, res) => {
+
+    try {
+
+        const auth = req.headers.authorization;
+
+        if (!auth) {
+            return res.status(401).json([]);
+        }
+
+        const token = auth.split(" ")[1];
+
+        let decoded;
+
+try{
+
+    decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET
+    );
+
+}catch(err){
+
+    return res.status(401).json({
+        success:false,
+        message:"Session expired"
+    });
+}
+
+        const pool = await poolPromise;
+
+        const result = await pool.request()
+
+            .input(
+                "CustomerID",
+                sql.Int,
+                decoded.customerId
+            )
+
+            .query(`
+
+                SELECT
+                    o.OrderID,
+                    o.CreatedAt,
+                    o.Status,
+                    o.TotalAmount,
+                    o.SubTotal,
+                    o.VATAmount,
+                    o.AdditionalAmount,
+                    o.DiscountAmount,
+                    o.DiscountPercent,
+                    o.AdditionalPercent,
+                    o.VATPercent,
+
+                    p.PaymentMethod,
+                    p.PaymentStatus
+
+                FROM Orders o
+
+                LEFT JOIN Payments p
+                    ON o.OrderID = p.OrderID
+
+                WHERE o.CustomerID=@CustomerID
+
+                ORDER BY o.OrderID DESC
+
+            `);
+
+        res.json(result.recordset);
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json([]);
     }
 });
 

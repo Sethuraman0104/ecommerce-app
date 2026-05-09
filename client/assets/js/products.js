@@ -521,13 +521,22 @@ if (hasOffer) {
 
     async deleteCategory(id) {
 
-        if (!confirm("Delete category?")) return;
+    if (!confirm("Delete category?")) return;
 
+    try {
         await App.api(`/categories/${id}`, "DELETE");
 
         App.toast("Category deleted", "success");
         this.loadCategories();
+
+    } catch (err) {
+
+        // 🔥 show proper message instead of crash
+        App.toast(err.message || "Cannot delete category", "error");
+
+        console.error("Delete category failed:", err);
     }
+}
 };
 
 

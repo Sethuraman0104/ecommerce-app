@@ -8,9 +8,62 @@ window.onload = async () => {
 
     await CustomerApp.READY_PROMISE;
 
+    /* GOOGLE LOGIN TOKEN */
+
+const params =
+    new URLSearchParams(window.location.search);
+
+const token = params.get("token");
+
+if (token) {
+
+    localStorage.setItem("token", token);
+
+    history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+    );
+}
+
+/* LOAD CUSTOMER */
+
+const savedToken =
+    localStorage.getItem("token");
+
+if (savedToken) {
+
+    try {
+
+        const res = await fetch(
+            `${CustomerApp.API_BASE}/customer-auth/me`,
+            {
+                headers: {
+                    Authorization:
+                        `Bearer ${savedToken}`
+                }
+            }
+        );
+
+        const customer = await res.json();
+
+        localStorage.setItem(
+            "customer",
+            JSON.stringify(customer)
+        );
+
+        Auth.updateUI();
+
+    } catch {
+
+        localStorage.removeItem("token");
+    }
+}
+
     Shop.cart = JSON.parse(localStorage.getItem("cart")) || [];
 
     UI.updateBadge();
+    UI.toggleFloatingCart();
 
     await loadCategories();
     await loadProducts();
@@ -48,22 +101,106 @@ async function loadCategories() {
         categoryMap[String(c.CategoryID)] = c.Name;
     });
 
+    /* OLD CATEGORY BAR */
+
     document.getElementById("categories").innerHTML =
 
-        `<div class="cat active" onclick="filterCat(null, this)">
+        `
+        <div class="cat active"
+             onclick="filterCat(null, this)">
             All
-        </div>`
+        </div>
+        `
 
         +
 
         CATEGORIES.map(c => `
 
-            <div class="cat" onclick="filterCat(${c.CategoryID}, this)">
+            <div class="cat"
+                 onclick="filterCat(${c.CategoryID}, this)">
+
+                <i class="fa ${
+                    CATEGORY_ICONS[c.Name] ||
+                    CATEGORY_ICONS["Default"]
+                }"></i>
+
                 ${c.Name}
+
             </div>
 
         `).join("");
+
+    /* TOP DROPDOWN */
+
+    document.getElementById("dynamicTopCategories").innerHTML =
+
+        CATEGORIES.map(c => `
+
+        <div class="all-cat-item"
+             onclick="selectTopCategory(${c.CategoryID}, this)">
+
+            <div class="cat-icon">
+
+                <i class="fa ${
+                    CATEGORY_ICONS[c.Name] ||
+                    CATEGORY_ICONS["Default"]
+                }"></i>
+
+            </div>
+
+            <span>${c.Name}</span>
+
+        </div>
+
+        `).join("");
 }
+
+function selectTopCategory(id, el) {
+
+    selectedCategory = id
+        ? String(id)
+        : null;
+
+    /* ACTIVE */
+
+    document.querySelectorAll(".all-cat-item")
+        .forEach(x => x.classList.remove("active"));
+
+    el.classList.add("active");
+
+    renderGrouped();
+
+    /* CLOSE MENU */
+
+    document.getElementById("topCategoryLinks")
+        ?.classList.remove("show");
+
+    /* SCROLL */
+
+    document.getElementById("products")
+        ?.scrollIntoView({
+            behavior: "smooth"
+        });
+}
+
+function toggleCategoryMenu() {
+
+    document.getElementById("topCategoryLinks")
+        ?.classList.toggle("show");
+}
+
+/* =========================================
+   CLOSE OUTSIDE CLICK
+========================================= */
+
+document.addEventListener("click", function(e) {
+
+    if (!e.target.closest(".top-categories")) {
+
+        document.getElementById("topCategoryLinks")
+            ?.classList.remove("show");
+    }
+});
 
 /* ================= CATEGORY FILTER ================= */
 function filterCat(id, el) {
@@ -572,6 +709,7 @@ const Shop = {
         );
 
         UI.updateBadge();
+        UI.toggleFloatingCart();
 
         this.renderCart();
 
@@ -595,6 +733,7 @@ const Shop = {
         );
 
         UI.updateBadge();
+        UI.toggleFloatingCart();
 
         this.renderCart();
     },
@@ -610,6 +749,7 @@ const Shop = {
         );
 
         UI.updateBadge();
+        UI.toggleFloatingCart();
 
         this.renderCart();
     },
@@ -730,9 +870,10 @@ const Shop = {
 };
 
 /* ================= UI ================= */
+/* ================= UI ================= */
 const UI = {
 
-    updateBadge() {
+    updateBadge: function () {
 
         const badge = document.querySelector(".badge");
 
@@ -741,11 +882,33 @@ const UI = {
         badge.innerText = Shop.cart.length || 0;
     },
 
-    openCart() {
+    toggleFloatingCart: function () {
+
+        const bar =
+            document.getElementById("floatingActions");
+
+        const count =
+            document.getElementById("floatingCartCount");
+
+        if (!bar || !count) return;
+
+        count.innerText = Shop.cart.length || 0;
+
+        if (Shop.cart.length > 0) {
+
+            bar.classList.add("show");
+
+        } else {
+
+            bar.classList.remove("show");
+        }
+    },
+
+    openCart: function () {
         Shop.openCart();
     },
 
-    closeCart() {
+    closeCart: function () {
         Shop.closeCart();
     }
 };
@@ -769,7 +932,12 @@ window.onclick = function (e) {
 /* ================= RIPPLE EFFECT ================= */
 function addRipple(e) {
 
-    const btn = e.currentTarget;
+    const btn =
+        e.target.closest("button, .btn-primary, .checkout, .card");
+
+    if (!btn) return;
+
+    const rect = btn.getBoundingClientRect();
 
     const circle = document.createElement("span");
 
@@ -778,11 +946,7 @@ function addRipple(e) {
 
     const radius = diameter / 2;
 
-    const rect = btn.getBoundingClientRect();
-
-    circle.style.width =
-        circle.style.height =
-        `${diameter}px`;
+    circle.style.width = circle.style.height = `${diameter}px`;
 
     circle.style.left =
         `${e.clientX - rect.left - radius}px`;
@@ -792,9 +956,564 @@ function addRipple(e) {
 
     circle.classList.add("ripple");
 
-    const ripple = btn.querySelector(".ripple");
-
-    if (ripple) ripple.remove();
+    const existing = btn.querySelector(".ripple");
+    if (existing) existing.remove();
 
     btn.appendChild(circle);
+
+    setTimeout(() => circle.remove(), 600);
 }
+
+/* ================= AUTH ================= */
+
+const Auth = {
+
+    mode: "login",
+
+    /* ================= OPEN MODAL ================= */
+
+    open() {
+
+    document
+        .getElementById("authModal")
+        .style.display = "flex";
+
+    document.body.style.overflow = "hidden";
+
+    setTimeout(() => {
+    document.getElementById("authEmail").focus();
+}, 100);
+
+    // ✅ RESET EVERY TIME MODAL OPENS
+    this.resetForm();
+},
+
+    /* ================= CLOSE MODAL ================= */
+
+    close() {
+
+        document
+            .getElementById("authModal")
+            .style.display = "none";
+
+        document.body.style.overflow = "";
+    },
+
+    /* ================= TOGGLE LOGIN / REGISTER ================= */
+
+    toggleMode() {
+
+        this.mode =
+            this.mode === "login"
+                ? "register"
+                : "login";
+
+        const isRegister =
+            this.mode === "register";
+
+        document.getElementById("authTitle").innerText =
+            isRegister
+                ? "Create Account"
+                : "Customer Login";
+
+        document.getElementById("authName").style.display =
+            isRegister
+                ? "block"
+                : "none";
+
+        document.getElementById("registerBtn").style.display =
+            isRegister
+                ? "flex"
+                : "none";
+
+        document.getElementById("loginBtn").style.display =
+            isRegister
+                ? "none"
+                : "flex";
+
+        document.getElementById("authSwitchText").innerText =
+            isRegister
+                ? "Already have account?"
+                : "New customer?";
+
+        document.getElementById("authSwitchBtn").innerText =
+            isRegister
+                ? "Login"
+                : "Create Account";
+
+        /* CLEAR PASSWORD */
+
+        document.getElementById("authPassword").value = "";
+    },
+
+    /* ================= EMAIL VALIDATION ================= */
+
+    isValidEmail(email) {
+
+        const emailRegex =
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        return emailRegex.test(email);
+    },
+
+    /* ================= LOGIN ================= */
+
+    async login() {
+
+        try {
+
+            const email =
+                document.getElementById("authEmail")
+                    .value
+                    .trim();
+
+            const password =
+                document.getElementById("authPassword")
+                    .value
+                    .trim();
+
+            /* VALIDATION */
+
+            if (!email) {
+
+                return CustomerApp.toast(
+                    "Email address is required",
+                    "warning"
+                );
+            }
+
+            if (!this.isValidEmail(email)) {
+
+                return CustomerApp.toast(
+                    "Please enter a valid email address",
+                    "warning"
+                );
+            }
+
+            if (!password) {
+
+                return CustomerApp.toast(
+                    "Password is required",
+                    "warning"
+                );
+            }
+
+            /* API */
+
+            const res = await fetch(
+                `${CustomerApp.API_BASE}/customer-auth/login`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        email,
+                        password
+                    })
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+
+                return CustomerApp.toast(
+                    data.message || "Login failed",
+                    "error"
+                );
+            }
+
+            /* SAVE */
+
+            localStorage.setItem(
+                "token",
+                data.token
+            );
+
+            localStorage.setItem(
+                "customer",
+                JSON.stringify(data.customer)
+            );
+
+            /* UPDATE UI */
+
+            this.updateUI();
+
+            this.close();
+
+            CustomerApp.toast(
+                "Login successful",
+                "success"
+            );
+
+        } catch (err) {
+
+            console.log(err);
+
+            CustomerApp.toast(
+                "Login failed",
+                "error"
+            );
+        }
+    },
+
+    /* ================= REGISTER ================= */
+
+    async register() {
+
+        try {
+
+            const name =
+                document.getElementById("authName")
+                    .value
+                    .trim();
+
+            const email =
+                document.getElementById("authEmail")
+                    .value
+                    .trim();
+
+            const password =
+                document.getElementById("authPassword")
+                    .value
+                    .trim();
+
+            /* VALIDATION */
+
+            if (!name) {
+
+                return CustomerApp.toast(
+                    "Full name is required",
+                    "warning"
+                );
+            }
+
+            if (name.length < 3) {
+
+                return CustomerApp.toast(
+                    "Full name must be at least 3 characters",
+                    "warning"
+                );
+            }
+
+            if (!email) {
+
+                return CustomerApp.toast(
+                    "Email address is required",
+                    "warning"
+                );
+            }
+
+            if (!this.isValidEmail(email)) {
+
+                return CustomerApp.toast(
+                    "Please enter a valid email address",
+                    "warning"
+                );
+            }
+
+            if (!password) {
+
+                return CustomerApp.toast(
+                    "Password is required",
+                    "warning"
+                );
+            }
+
+            if (password.length < 6) {
+
+                return CustomerApp.toast(
+                    "Password must be at least 6 characters",
+                    "warning"
+                );
+            }
+
+            /* API */
+
+            const res = await fetch(
+                `${CustomerApp.API_BASE}/customer-auth/register`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        password
+                    })
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+
+                return CustomerApp.toast(
+                    data.message || "Registration failed",
+                    "error"
+                );
+            }
+
+            CustomerApp.toast(
+                "Registration successful",
+                "success"
+            );
+
+            /* CLEAR */
+
+            document.getElementById("authName").value = "";
+
+            document.getElementById("authEmail").value = "";
+
+            document.getElementById("authPassword").value = "";
+
+            /* SWITCH TO LOGIN */
+
+            this.toggleMode();
+
+        } catch (err) {
+
+            console.log(err);
+
+            CustomerApp.toast(
+                "Registration failed",
+                "error"
+            );
+        }
+    },
+
+    /* ================= FORGOT PASSWORD ================= */
+
+    async forgotPassword() {
+
+        const email =
+            document.getElementById("authEmail")
+                .value
+                .trim();
+
+        /* VALIDATION */
+
+        if (!email) {
+
+            return CustomerApp.toast(
+                "Enter email address first",
+                "warning"
+            );
+        }
+
+        if (!this.isValidEmail(email)) {
+
+            return CustomerApp.toast(
+                "Please enter a valid email address",
+                "warning"
+            );
+        }
+
+        try {
+
+            const res = await fetch(
+                `${CustomerApp.API_BASE}/customer-auth/forgot-password`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        email
+                    })
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+
+                return CustomerApp.toast(
+                    data.message || "Unable to process request",
+                    "error"
+                );
+            }
+
+            CustomerApp.toast(
+                data.message ||
+                "Reset link sent successfully",
+                "success"
+            );
+
+        } catch (err) {
+
+            console.log(err);
+
+            CustomerApp.toast(
+                "Unable to process request",
+                "error"
+            );
+        }
+    },
+
+    /* ================= UPDATE UI ================= */
+
+    updateUI() {
+
+        const customer =
+            JSON.parse(
+                localStorage.getItem("customer")
+            );
+
+        const text =
+            document.getElementById("authBtnText");
+
+        const guestMenu =
+            document.getElementById("guestMenu");
+
+        const loggedMenu =
+            document.getElementById("loggedMenu");
+
+        const avatar =
+            document.querySelector(".customer-avatar");
+
+        /* NO LOGIN */
+
+        if (!customer) {
+
+            text.innerText = "Sign In";
+
+            guestMenu.style.display = "block";
+
+            loggedMenu.style.display = "none";
+
+            avatar.innerHTML =
+                `<i class="fa fa-user"></i>`;
+
+            return;
+        }
+
+        /* USER NAME */
+
+        const customerName =
+            customer.FullName ||
+            customer.name ||
+            "My Account";
+
+        text.innerText = customerName;
+
+        /* AVATAR LETTER */
+
+        avatar.innerHTML =
+            `
+            <span style="
+                font-weight:800;
+                font-size:16px;
+                color:#fff;
+            ">
+                ${customerName
+                    .charAt(0)
+                    .toUpperCase()}
+            </span>
+            `;
+
+        /* MENUS */
+
+        guestMenu.style.display = "none";
+
+        loggedMenu.style.display = "block";
+    },
+
+    /* ================= TOGGLE MENU ================= */
+
+    toggleMenu(e) {
+
+        e.stopPropagation();
+
+        document
+            .getElementById("customerDropdown")
+            ?.classList.toggle("show");
+    },
+
+    /* ================= LOGOUT ================= */
+
+    logout() {
+
+        localStorage.removeItem("token");
+
+        localStorage.removeItem("customer");
+
+        CustomerApp.toast(
+            "Logged out successfully",
+            "success"
+        );
+
+        setTimeout(() => {
+
+            location.reload();
+
+        }, 800);
+    },
+
+    /* ================= OPEN REGISTER ================= */
+
+    openRegister() {
+
+        this.open();
+
+        if (this.mode !== "register") {
+
+            this.toggleMode();
+        }
+    },
+
+    resetForm() {
+
+    document.getElementById("authName").value = "";
+    document.getElementById("authEmail").value = "";
+    document.getElementById("authPassword").value = "";
+
+    // reset to login mode every time modal opens
+    this.mode = "login";
+
+    document.getElementById("authTitle").innerText = "Customer Login";
+
+    document.getElementById("authName").style.display = "none";
+
+    document.getElementById("registerBtn").style.display = "none";
+
+    document.getElementById("loginBtn").style.display = "flex";
+
+    document.getElementById("authSwitchText").innerText = "New customer?";
+
+    document.getElementById("authSwitchBtn").innerText = "Create Account";
+}
+};
+
+/* ================= CLOSE DROPDOWN ================= */
+
+document.addEventListener("click", function(e){
+
+    if(!e.target.closest(".customer-menu")){
+
+        document
+            .getElementById("customerDropdown")
+            ?.classList.remove("show");
+    }
+});
+
+/* ================= CLOSE AUTH MODAL OUTSIDE CLICK ================= */
+
+window.addEventListener("click", function(e){
+
+    const authModal =
+        document.getElementById("authModal");
+
+    if(e.target === authModal){
+
+        Auth.close();
+    }
+});

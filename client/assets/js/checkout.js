@@ -461,7 +461,7 @@ const Checkout = {
                     <div class="pay-coupon">
                         <input id="couponCode" placeholder="Enter coupon">
                         <button onclick="Checkout.applyCoupon(document.getElementById('couponCode').value)">
-                            Apply
+                            <i class="fa fa-tag"></i> Apply
                         </button>
                     </div>
                 </div>
@@ -483,7 +483,7 @@ const Checkout = {
                     </div>
 
                     <button class="btn-primary" onclick="Checkout.payCard()">
-                        Pay with Card
+                        <i class="fa fa-credit-card"></i> Pay with Card
                     </button>
                 </div>
 
@@ -531,8 +531,8 @@ const Checkout = {
 
         <!-- FOOTER -->
         <div class="pay-footer">
-            <button class="btn-secondary" onclick="Checkout.closePaymentModal()">Cancel</button>
-            <button class="btn-primary" onclick="Checkout.processPayment()">Pay Now</button>
+            <button class="btn-secondary" onclick="Checkout.closePaymentModal()"><i class="fa fa-times-circle"></i> Cancel</button>
+            <button class="btn-primary" onclick="Checkout.processPayment()"><i class="fa fa-money-bill-wave"></i> Pay Now</button>
         </div>
 
     </div>

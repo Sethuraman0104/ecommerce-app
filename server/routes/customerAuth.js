@@ -30,6 +30,48 @@ router.post('/register', async (req, res) => {
     }
 });
 
+router.post('/forgot-password', async (req, res) => {
+
+    try {
+
+        const { email } = req.body;
+
+        const pool = await poolPromise;
+
+        const result = await pool.request()
+            .input("Email", email)
+            .query(`
+                SELECT *
+                FROM Customers
+                WHERE Email=@Email
+            `);
+
+        if (!result.recordset.length) {
+
+            return res.json({
+                message:
+                    "If account exists, reset email sent"
+            });
+        }
+
+        // TODO:
+        // generate reset token
+        // send email
+
+        return res.json({
+            message:
+                "Password reset email sent"
+        });
+
+    } catch {
+
+        res.status(500).json({
+            message:
+                "Unable to process request"
+        });
+    }
+});
+
 /* ================= LOGIN ================= */
 router.post('/login', async (req, res) => {
     try {
