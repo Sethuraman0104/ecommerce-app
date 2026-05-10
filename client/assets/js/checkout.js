@@ -14,77 +14,192 @@ const Checkout = {
     discountPercent: 0,
 
     /* ================= INIT ================= */
-    async init() {
+    /* ================= INIT ================= */
+async init() {
 
+    try {
+
+        // =========================
+        // CHECK LOGIN TOKEN
+        // =========================
+
+        const token = localStorage.getItem("token");
+
+        // no token
+        if (!token) {
+
+            CustomerApp.toast(
+                "Please login to continue",
+                "error"
+            );
+
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1200);
+
+            return;
+        }
+
+        // validate token from server
         try {
 
-            CustomerApp.requireLogin();
-
-            // =========================
-            // 🔥 HANDLE PAYMENT RETURN
-            // =========================
-            const urlParams = new URLSearchParams(window.location.search);
-            const paymentStatus = urlParams.get("payment");
-
-            if (paymentStatus === "success") {
-
-                const result = JSON.parse(localStorage.getItem("paymentResult") || "null");
-
-                if (result) {
-                    console.log("💳 Payment Success:", result);
-
-                    // prevent duplicate orders
-                    if (!localStorage.getItem("orderPlaced")) {
-
-                        await this.finalizeOrder("Online");
-
-                        localStorage.setItem("orderPlaced", "true");
+            const res = await fetch(
+                `${CustomerApp.API_BASE}/customer-auth/me`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
                     }
-
-                    localStorage.removeItem("paymentResult");
-
-                    CustomerApp.toast("Payment successful", "success");
                 }
+            );
 
-            } else if (paymentStatus === "cancel") {
+            // invalid token
+            if (!res.ok) {
 
-                CustomerApp.toast("Payment cancelled", "error");
-            }
+                localStorage.removeItem("token");
+                localStorage.removeItem("customer");
 
-            // cleanup URL
-            window.history.replaceState({}, document.title, window.location.pathname);
+                CustomerApp.toast(
+                    "Session expired. Please login again",
+                    "error"
+                );
 
-            // =========================
-            // CART LOAD
-            // =========================
-            this.cart = JSON.parse(localStorage.getItem("cart")) || [];
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1200);
 
-            if (!this.cart.length) {
-                CustomerApp.toast("Cart is empty", "error");
-                window.location.href = "index.html";
                 return;
             }
 
-            // =========================
-            // WAIT APP READY
-            // =========================
-            if (CustomerApp.READY_PROMISE) {
-                await CustomerApp.READY_PROMISE;
-            }
+            // valid customer
+            const customer = await res.json();
 
-            await this.loadSettings();
-            await this.loadCustomer();
+            // save fresh customer
+            localStorage.setItem(
+                "customer",
+                JSON.stringify(customer)
+            );
 
-            this.renderUserBox();
-            this.render();
-
-            console.log("✅ Checkout initialized");
+            CustomerApp.CUSTOMER = customer;
 
         } catch (err) {
-            console.error("❌ INIT ERROR:", err);
-            CustomerApp.toast("Checkout init failed", "error");
+
+            console.error("Token validation error:", err);
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("customer");
+
+            CustomerApp.toast(
+                "Authentication failed",
+                "error"
+            );
+
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1200);
+
+            return;
         }
-    },
+
+        // =========================
+        // 🔥 HANDLE PAYMENT RETURN
+        // =========================
+
+        const urlParams =
+            new URLSearchParams(window.location.search);
+
+        const paymentStatus =
+            urlParams.get("payment");
+
+        if (paymentStatus === "success") {
+
+            const result = JSON.parse(
+                localStorage.getItem("paymentResult") || "null"
+            );
+
+            if (result) {
+
+                console.log("💳 Payment Success:", result);
+
+                // prevent duplicate orders
+                if (!localStorage.getItem("orderPlaced")) {
+
+                    await this.finalizeOrder("Online");
+
+                    localStorage.setItem(
+                        "orderPlaced",
+                        "true"
+                    );
+                }
+
+                localStorage.removeItem("paymentResult");
+
+                CustomerApp.toast(
+                    "Payment successful",
+                    "success"
+                );
+            }
+
+        } else if (paymentStatus === "cancel") {
+
+            CustomerApp.toast(
+                "Payment cancelled",
+                "error"
+            );
+        }
+
+        // cleanup URL
+        window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+        );
+
+        // =========================
+        // CART LOAD
+        // =========================
+
+        this.cart =
+            JSON.parse(localStorage.getItem("cart")) || [];
+
+        if (!this.cart.length) {
+
+            CustomerApp.toast(
+                "Cart is empty",
+                "error"
+            );
+
+            window.location.href = "index.html";
+
+            return;
+        }
+
+        // =========================
+        // WAIT APP READY
+        // =========================
+
+        if (CustomerApp.READY_PROMISE) {
+
+            await CustomerApp.READY_PROMISE;
+        }
+
+        await this.loadSettings();
+        await this.loadCustomer();
+
+        this.renderUserBox();
+        this.render();
+
+        console.log("✅ Checkout initialized");
+
+    } catch (err) {
+
+        console.error("❌ INIT ERROR:", err);
+
+        CustomerApp.toast(
+            "Checkout init failed",
+            "error"
+        );
+    }
+},
     async applyCoupon(code) {
 
         try {

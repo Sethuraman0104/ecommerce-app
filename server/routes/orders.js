@@ -274,10 +274,19 @@ router.post("/full-create", async (req, res) => {
     try {
 
         const auth = req.headers.authorization;
-        if (!auth) return res.status(401).json({ success: false });
+
+        if (!auth) {
+            return res.status(401).json({
+                success: false
+            });
+        }
 
         const token = auth.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
 
         const customerId = decoded.customerId;
 
@@ -295,6 +304,7 @@ router.post("/full-create", async (req, res) => {
         } = req.body;
 
         const pool = await poolPromise;
+
         const transaction = new sql.Transaction(pool);
 
         await transaction.begin();
@@ -302,126 +312,257 @@ router.post("/full-create", async (req, res) => {
         try {
 
             // ===============================
-            // ORDER STATUS
-            // ===============================
-            const orderStatus = "Processing";
-
-            // ===============================
-            // PAYMENT LOGIC
+            // PAYMENT TYPE CHECK
             // ===============================
             const isCOD =
                 PaymentMethod === "COD" ||
                 PaymentMethod === "Cash";
 
+            // ===============================
+            // ORDER STATUS
+            // ===============================
+            const orderStatus = isCOD
+                ? "Pending"
+                : "Processing";
+
+            // ===============================
+            // PAYMENT STATUS
+            // ===============================
             const finalPaymentStatus = isCOD
                 ? "Pending"
                 : (PaymentStatus || "Success");
 
+            // ===============================
+            // TRANSACTION ID
+            // ===============================
             const transactionId = isCOD
                 ? null
                 : "TXN" + Date.now();
 
             // ===============================
-            // EXTRACT VAT / ADDITIONAL
+            // VAT / EXTRA
             // ===============================
             const vatPercent = VAT?.percent || 0;
             const vatAmount = VAT?.amount || 0;
 
-            const addPercent = AdditionalCharges?.percent || 0;
-            const addAmount = AdditionalCharges?.amount || 0;
+            const addPercent =
+                AdditionalCharges?.percent || 0;
+
+            const addAmount =
+                AdditionalCharges?.amount || 0;
 
             // ===============================
             // CREATE ORDER
             // ===============================
-            const orderResult = await new sql.Request(transaction)
-                .input("CustomerID", sql.Int, customerId)
-                .input("TotalAmount", sql.Decimal(18, 2), GrandTotal)
-                .input("Status", sql.NVarChar, orderStatus)
+            const orderResult =
+                await new sql.Request(transaction)
 
-                .input("CouponID", sql.Int, CouponID)
-                .input("DiscountAmount", sql.Decimal(18, 2), DiscountAmount || 0)
-                .input("DiscountPercent", sql.Decimal(5, 2), DiscountPercent)
+                    .input(
+                        "CustomerID",
+                        sql.Int,
+                        customerId
+                    )
 
-                .input("VATPercent", sql.Decimal(5, 2), vatPercent)
-                .input("VATAmount", sql.Decimal(18, 2), vatAmount)
+                    .input(
+                        "TotalAmount",
+                        sql.Decimal(18, 2),
+                        GrandTotal
+                    )
 
-                .input("AdditionalPercent", sql.Decimal(5, 2), addPercent)
-                .input("AdditionalAmount", sql.Decimal(18, 2), addAmount)
-                .input("SubTotal", sql.Decimal(18, 2), SubTotal)
+                    .input(
+                        "Status",
+                        sql.NVarChar,
+                        orderStatus
+                    )
 
-                .query(`
-                    INSERT INTO Orders
-                    (
-                        CustomerID,
-                        TotalAmount,
-                        Status,
-                        CreatedAt,
+                    .input(
+                        "CouponID",
+                        sql.Int,
+                        CouponID
+                    )
 
-                        CouponID,
-                        DiscountAmount,
-                        DiscountPercent,
+                    .input(
+                        "DiscountAmount",
+                        sql.Decimal(18, 2),
+                        DiscountAmount || 0
+                    )
 
-                        VATPercent,
-                        VATAmount,
+                    .input(
+                        "DiscountPercent",
+                        sql.Decimal(5, 2),
+                        DiscountPercent || 0
+                    )
 
-                        AdditionalPercent,
-                        AdditionalAmount,
+                    .input(
+                        "VATPercent",
+                        sql.Decimal(5, 2),
+                        vatPercent
+                    )
+
+                    .input(
+                        "VATAmount",
+                        sql.Decimal(18, 2),
+                        vatAmount
+                    )
+
+                    .input(
+                        "AdditionalPercent",
+                        sql.Decimal(5, 2),
+                        addPercent
+                    )
+
+                    .input(
+                        "AdditionalAmount",
+                        sql.Decimal(18, 2),
+                        addAmount
+                    )
+
+                    .input(
+                        "SubTotal",
+                        sql.Decimal(18, 2),
                         SubTotal
                     )
-                    OUTPUT INSERTED.OrderID
-                    VALUES
-                    (
-                        @CustomerID,
-                        @TotalAmount,
-                        @Status,
-                        GETDATE(),
 
-                        @CouponID,
-                        @DiscountAmount,
-                        @DiscountPercent,
+                    .query(`
+                        INSERT INTO Orders
+                        (
+                            CustomerID,
+                            TotalAmount,
+                            Status,
+                            CreatedAt,
 
-                        @VATPercent,
-                        @VATAmount,
+                            CouponID,
+                            DiscountAmount,
+                            DiscountPercent,
 
-                        @AdditionalPercent,
-                        @AdditionalAmount,
-                        @SubTotal
-                    )
-                `);
+                            VATPercent,
+                            VATAmount,
 
-            const orderId = orderResult.recordset[0].OrderID;
+                            AdditionalPercent,
+                            AdditionalAmount,
+                            SubTotal
+                        )
+
+                        OUTPUT INSERTED.OrderID
+
+                        VALUES
+                        (
+                            @CustomerID,
+                            @TotalAmount,
+                            @Status,
+                            GETDATE(),
+
+                            @CouponID,
+                            @DiscountAmount,
+                            @DiscountPercent,
+
+                            @VATPercent,
+                            @VATAmount,
+
+                            @AdditionalPercent,
+                            @AdditionalAmount,
+                            @SubTotal
+                        )
+                    `);
+
+            const orderId =
+                orderResult.recordset[0].OrderID;
 
             // ===============================
-            // ORDER ITEMS
+            // INSERT ORDER ITEMS
             // ===============================
             for (let item of Items) {
 
                 await new sql.Request(transaction)
-                    .input("OrderID", sql.Int, orderId)
-                    .input("ProductID", sql.Int, item.ProductID)
-                    .input("Quantity", sql.Int, item.Qty)
-                    .input("Price", sql.Decimal(18, 2), item.Price)
+
+                    .input(
+                        "OrderID",
+                        sql.Int,
+                        orderId
+                    )
+
+                    .input(
+                        "ProductID",
+                        sql.Int,
+                        item.ProductID
+                    )
+
+                    .input(
+                        "Quantity",
+                        sql.Int,
+                        item.Qty
+                    )
+
+                    .input(
+                        "Price",
+                        sql.Decimal(18, 2),
+                        item.Price
+                    )
+
                     .query(`
                         INSERT INTO OrderItems
-                        (OrderID, ProductID, Quantity, Price)
+                        (
+                            OrderID,
+                            ProductID,
+                            Quantity,
+                            Price
+                        )
                         VALUES
-                        (@OrderID, @ProductID, @Quantity, @Price)
+                        (
+                            @OrderID,
+                            @ProductID,
+                            @Quantity,
+                            @Price
+                        )
                     `);
             }
 
             // ===============================
-            // PAYMENT INSERT
+            // INSERT PAYMENT
             // ===============================
             await new sql.Request(transaction)
-                .input("OrderID", sql.Int, orderId)
-                .input("PaymentMethod", sql.NVarChar, PaymentMethod)
-                .input("PaymentStatus", sql.NVarChar, finalPaymentStatus)
-                .input("TransactionID", sql.NVarChar, transactionId)
+
+                .input(
+                    "OrderID",
+                    sql.Int,
+                    orderId
+                )
+
+                .input(
+                    "PaymentMethod",
+                    sql.NVarChar,
+                    PaymentMethod
+                )
+
+                .input(
+                    "PaymentStatus",
+                    sql.NVarChar,
+                    finalPaymentStatus
+                )
+
+                .input(
+                    "TransactionID",
+                    sql.NVarChar,
+                    transactionId
+                )
+
                 .query(`
                     INSERT INTO Payments
-                    (OrderID, PaymentMethod, PaymentStatus, TransactionID, PaidAt)
+                    (
+                        OrderID,
+                        PaymentMethod,
+                        PaymentStatus,
+                        TransactionID,
+                        PaidAt
+                    )
                     VALUES
-                    (@OrderID, @PaymentMethod, @PaymentStatus, @TransactionID, GETDATE())
+                    (
+                        @OrderID,
+                        @PaymentMethod,
+                        @PaymentStatus,
+                        @TransactionID,
+                        GETDATE()
+                    )
                 `);
 
             // ===============================
@@ -432,21 +573,34 @@ router.post("/full-create", async (req, res) => {
             res.json({
                 success: true,
                 orderId,
+                orderStatus,
                 paymentStatus: finalPaymentStatus,
                 transactionId
             });
 
         } catch (err) {
+
             await transaction.rollback();
+
             throw err;
         }
 
     } catch (err) {
+
         console.error(err);
-        res.status(500).json({ success: false, message: err.message });
+
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 });
 
+
+
+// ======================================================
+// MY ORDERS
+// ======================================================
 router.get("/my-orders", async (req, res) => {
 
     try {
@@ -461,20 +615,20 @@ router.get("/my-orders", async (req, res) => {
 
         let decoded;
 
-try{
+        try {
 
-    decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET
-    );
+            decoded = jwt.verify(
+                token,
+                process.env.JWT_SECRET
+            );
 
-}catch(err){
+        } catch (err) {
 
-    return res.status(401).json({
-        success:false,
-        message:"Session expired"
-    });
-}
+            return res.status(401).json({
+                success: false,
+                message: "Session expired"
+            });
+        }
 
         const pool = await poolPromise;
 
@@ -509,7 +663,7 @@ try{
                 LEFT JOIN Payments p
                     ON o.OrderID = p.OrderID
 
-                WHERE o.CustomerID=@CustomerID
+                WHERE o.CustomerID = @CustomerID
 
                 ORDER BY o.OrderID DESC
 
@@ -524,5 +678,4 @@ try{
         res.status(500).json([]);
     }
 });
-
 module.exports = router;

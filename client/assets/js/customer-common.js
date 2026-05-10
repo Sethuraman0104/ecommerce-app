@@ -31,6 +31,8 @@ const CustomerApp = {
         this.loadSettings()
     ]);
 
+    this.loadUserUI();
+
     this.READY = true;
 
     if (this.READY_RESOLVE) {
@@ -135,40 +137,162 @@ const CustomerApp = {
     // ==========================
     // COMPANY INFO
     // ==========================
-    async loadCompany() {
-        try {
+    // ==========================
+// COMPANY INFO
+// ==========================
+async loadCompany() {
 
-            const data = await this.api("/public/app-info");
+    try {
 
-            const companyName = data.company?.Name || "E-Shop";
-            const logo = data.company?.Logo || "assets/logo.png";
+        const data = await this.api("/public/app-info");
 
-            const setText = (id, value) => {
-                const el = document.getElementById(id);
-                if (el) el.innerText = value;
+        const companyName =
+            data.company?.Name ||
+            this.SETTINGS?.CompanyName ||
+            "E-Shop";
+
+        const logo =
+            data.company?.Logo ||
+            this.SETTINGS?.Logo ||
+            "assets/logo.png";
+
+        // -------------------------
+        // HELPERS
+        // -------------------------
+        const setText = (id, value) => {
+
+            const el = document.getElementById(id);
+
+            if (el) {
+                el.innerText = value;
+            }
+        };
+
+        const setSrc = (id, value) => {
+
+            const el = document.getElementById(id);
+
+            if (!el || !value) return;
+
+            el.onerror = function () {
+                this.onerror = null;
+                this.src = "assets/logo.png";
             };
 
-            const setSrc = (id, value) => {
-                const el = document.getElementById(id);
-                if (el && value) el.src = value;
-            };
+            el.src = value;
+        };
 
-            setText("companyName", companyName);
-            setSrc("logo", logo);
+        // -------------------------
+        // HEADER
+        // -------------------------
+        setText("companyName", companyName);
+        setSrc("logo", logo);
 
-            const fullTitle = `${companyName} - eCommerce`;
-            document.title = fullTitle;
+        // -------------------------
+        // FOOTER
+        // -------------------------
+        setText("footerName", companyName);
+        setText("footerCompany", companyName);
 
-            const pageTitle = document.getElementById("pageTitle");
-            if (pageTitle) pageTitle.innerText = fullTitle;
+        setSrc("footerLogo", logo);
 
-            const favicon = document.getElementById("appFavicon");
-            if (favicon && logo) favicon.href = logo;
+        // -------------------------
+        // PAGE TITLE
+        // -------------------------
+        const fullTitle = `${companyName} - eCommerce`;
 
-        } catch (err) {
-            console.error(err);
+        document.title = fullTitle;
+
+        const pageTitle =
+            document.getElementById("pageTitle");
+
+        if (pageTitle) {
+            pageTitle.innerText = fullTitle;
         }
-    },
+
+        // -------------------------
+        // FAVICON
+        // -------------------------
+        const favicon =
+            document.getElementById("appFavicon");
+
+        if (favicon && logo) {
+            favicon.href = logo;
+        }
+
+        // -------------------------
+        // FOOTER YEAR
+        // -------------------------
+        const yearEl =
+            document.getElementById("footerYear");
+
+        if (yearEl) {
+            yearEl.innerText = new Date().getFullYear();
+        }
+
+        // -------------------------
+        // STORE GLOBALLY
+        // -------------------------
+        this.COMPANY_NAME = companyName;
+        this.COMPANY_LOGO = logo;
+
+        console.log("🏢 Company Loaded:", companyName);
+
+    } catch (err) {
+
+        console.error("Company load failed:", err);
+    }
+},// ==========================
+// LOAD CURRENT USER UI
+// ==========================
+loadUserUI() {
+
+    const customer =
+        this.CUSTOMER ||
+        JSON.parse(localStorage.getItem("customer") || "null");
+
+    // -------------------------
+    // USER NAME
+    // -------------------------
+    const userName =
+        customer?.FullName ||
+        customer?.Name ||
+        customer?.Email ||
+        "Guest";
+
+    const userNameEl =
+        document.getElementById("userName");
+
+    if (userNameEl) {
+        userNameEl.innerText = userName;
+    }
+
+    // -------------------------
+    // OPTIONAL USER EMAIL
+    // -------------------------
+    const emailEl =
+        document.getElementById("userEmail");
+
+    if (emailEl && customer?.Email) {
+        emailEl.innerText = customer.Email;
+    }
+
+    // -------------------------
+    // OPTIONAL AVATAR LETTER
+    // -------------------------
+    const avatarEl =
+        document.getElementById("userAvatarText");
+
+    if (avatarEl) {
+
+        const first =
+            userName.charAt(0).toUpperCase();
+
+        avatarEl.innerText = first;
+    }
+
+    console.log("👤 User UI Loaded:", userName);
+},
 
     // ==========================
     // SETTINGS
@@ -222,17 +346,21 @@ const CustomerApp = {
     // ==========================
     goToCheckout() {
 
-    const token =
-        localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-    if (!token) {
+if (!token) {
 
-        Auth.open();
+    CustomerApp.toast(
+        "Please login to continue checkout",
+        "error"
+    );
 
-        return;
-    }
+    Auth.open();
 
-    location.href = "checkout.html";
+    return;
+}
+
+window.location.href = "checkout.html";
 },
 
     // ==========================
