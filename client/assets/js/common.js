@@ -3,8 +3,9 @@
 // ==========================
 const App = {
 
-    API_BASE: "http://localhost:3000/api",
-
+    API_BASE: window.location.hostname === "localhost"
+        ? "http://localhost:3000/api"
+        : "https://hrinfo-ecommerece.onrender.com/api",
     READY: false,
 READY_PROMISE: null,
 READY_RESOLVE: null,

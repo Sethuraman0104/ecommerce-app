@@ -6,7 +6,7 @@ const Company = {
 
     async load() {
         try {
-            const res = await fetch("http://localhost:3000/api/company");
+            const res = await fetch(`${CONFIG.API_BASE}/company`);
             const data = await res.json();
 
             document.getElementById("cName").value = data.Name || "";
@@ -57,7 +57,7 @@ const Company = {
                 mimeType
             };
 
-            const res = await fetch("http://localhost:3000/api/company", {
+            const res = await fetch(`${CONFIG.API_BASE}/company`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)

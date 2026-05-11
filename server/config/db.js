@@ -1,7 +1,6 @@
 const sql = require("mssql");
 require("dotenv").config();
 
-// Build configuration from environment variables
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -9,12 +8,11 @@ const config = {
     database: process.env.DB_DATABASE,
 
     options: {
-        encrypt: true, // required for Azure / cloud SQL
-        trustServerCertificate: process.env.DB_TRUST_CERTIFICATE === "true"
+        encrypt: false, // IMPORTANT for local SQL Server
+        trustServerCertificate: true
     }
 };
 
-// Create connection pool
 const poolPromise = new sql.ConnectionPool(config)
     .connect()
     .then(pool => {
@@ -26,7 +24,4 @@ const poolPromise = new sql.ConnectionPool(config)
         throw err;
     });
 
-module.exports = {
-    sql,
-    poolPromise
-};
+module.exports = { sql, poolPromise };

@@ -667,10 +667,8 @@ async function register(){
     }
 }
 
-/* ================= GOOGLE ================= */
-function googleLogin(){
-    window.location.href =
-        "http://localhost:3000/api/customer-auth/google";
+function googleLogin() {
+    window.location.href = `${CONFIG.API_BASE}/customer-auth/google`;
 }
 
 /* ================= REDIRECT ================= */
