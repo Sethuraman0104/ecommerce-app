@@ -6,10 +6,9 @@ const crypto = require('crypto');
 const router = express.Router();
 const { poolPromise } = require('../config/db');
 
-
-// ==========================
-// REGISTER USER
-// ==========================
+/* =========================
+   REGISTER USER
+========================= */
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -32,20 +31,17 @@ router.post('/register', async (req, res) => {
         res.json({ message: "User registered successfully" });
 
     } catch (err) {
+        console.error("REGISTER ERROR:", err);
         res.status(500).json({ message: err.message });
     }
 });
 
+/* =========================
+   LOGIN
+========================= */
 router.post('/login', async (req, res) => {
     try {
         const pool = await poolPromise;
-
-        if (!pool) {
-            return res.status(500).json({
-                message: "Database connection not available"
-            });
-        }
-
         const { email, password } = req.body;
 
         const result = await pool.request()
@@ -70,9 +66,6 @@ router.post('/login', async (req, res) => {
 
         const role = user.RoleID === 1 ? "Admin" : "User";
 
-        /* =========================
-           🔥 UPDATE LAST LOGIN
-        ========================= */
         await pool.request()
             .input('UserID', user.UserID)
             .query(`
@@ -109,35 +102,42 @@ router.post('/login', async (req, res) => {
     }
 });
 
+/* =========================
+   CURRENCY
+========================= */
 router.get('/currency', async (req, res) => {
-    const pool = await poolPromise;
+    try {
+        const pool = await poolPromise;
 
-    const result = await pool.request().query(`
-        SELECT Value FROM Settings WHERE KeyName='Currency'
-    `);
+        const result = await pool.request().query(`
+            SELECT TOP 1 Value FROM Settings WHERE KeyName='Currency'
+        `);
 
-    res.json(result.recordset[0]);
+        res.json(result.recordset[0] || { Value: "$" });
+
+    } catch (err) {
+        console.error("CURRENCY ERROR:", err);
+        res.status(500).json({ message: "Error fetching currency" });
+    }
 });
 
-// ==========================
-// FORGOT PASSWORD
-// ==========================
+/* =========================
+   FORGOT PASSWORD
+========================= */
 router.post('/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
-
         const pool = await poolPromise;
 
         const userRes = await pool.request()
             .input('Email', email)
             .query(`SELECT * FROM Users WHERE Email=@Email`);
 
-        if (userRes.recordset.length === 0) {
+        if (!userRes.recordset.length) {
             return res.json({ message: "If email exists, reset link sent" });
         }
 
         const user = userRes.recordset[0];
-
         const token = crypto.randomBytes(32).toString('hex');
 
         await pool.request()
@@ -149,23 +149,22 @@ router.post('/forgot-password', async (req, res) => {
                 VALUES (@UserID, @Token, @Expiry)
             `);
 
-        console.log(`Reset link: http://localhost:3000/reset-password/${token}`);
+        console.log(`Reset link: https://hrinfo-ecommerece.onrender.com/reset-password/${token}`);
 
-        res.json({ message: "Reset link sent (check console)" });
+        res.json({ message: "Reset link sent" });
 
     } catch (err) {
+        console.error("FORGOT PASSWORD ERROR:", err);
         res.status(500).json({ message: err.message });
     }
 });
 
-
-// ==========================
-// RESET PASSWORD
-// ==========================
+/* =========================
+   RESET PASSWORD
+========================= */
 router.post('/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
-
         const pool = await poolPromise;
 
         const tokenRes = await pool.request()
@@ -175,11 +174,11 @@ router.post('/reset-password', async (req, res) => {
                 WHERE Token=@Token AND Expiry > GETDATE()
             `);
 
-        if (tokenRes.recordset.length === 0)
+        if (!tokenRes.recordset.length) {
             return res.status(400).json({ message: "Invalid or expired token" });
+        }
 
         const userId = tokenRes.recordset[0].UserID;
-
         const hashed = await bcrypt.hash(newPassword, 10);
 
         await pool.request()
@@ -194,6 +193,7 @@ router.post('/reset-password', async (req, res) => {
         res.json({ message: "Password updated successfully" });
 
     } catch (err) {
+        console.error("RESET PASSWORD ERROR:", err);
         res.status(500).json({ message: err.message });
     }
 });
