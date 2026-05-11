@@ -1,37 +1,32 @@
-const sql = require('mssql');
+const sql = require("mssql");
+require("dotenv").config();
 
-// const config = {
-//     user: 'ecommerce_user',
-//     password: 'StrongPassword@123',
-//     server: 'SETHULAPTOP\\SQLEXPRESS',
-//     database: 'ECommerceDB',
-
-//     options: {
-//         encrypt: false,
-//         trustServerCertificate: true
-//     }
-// };
-
+// Build configuration from environment variables
 const config = {
-    user: 'ecommerce_user',
-    password: 'StrongPassword@123',
-    server: '01-181259\\SQLEXPRESS',
-    database: 'ECommerceDB',
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_SERVER,
+    database: process.env.DB_DATABASE,
 
     options: {
-        encrypt: false,
-        trustServerCertificate: true
+        encrypt: true, // required for Azure / cloud SQL
+        trustServerCertificate: process.env.DB_TRUST_CERTIFICATE === "true"
     }
 };
 
+// Create connection pool
 const poolPromise = new sql.ConnectionPool(config)
     .connect()
     .then(pool => {
-        console.log("✅ SQL Connected Successfully (SQL Auth)");
+        console.log("✅ SQL Connected Successfully");
         return pool;
     })
     .catch(err => {
         console.error("❌ SQL Connection Failed:", err);
+        throw err;
     });
 
-module.exports = { sql, poolPromise };
+module.exports = {
+    sql,
+    poolPromise
+};
