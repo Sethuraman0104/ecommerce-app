@@ -149,7 +149,7 @@ router.post('/forgot-password', async (req, res) => {
                 VALUES (@UserID, @Token, @Expiry)
             `);
 
-        console.log(`Reset link: http://localhost:5000/reset-password/${token}`);
+        console.log(`Reset link: http://localhost:3000/reset-password/${token}`);
 
         res.json({ message: "Reset link sent (check console)" });
 

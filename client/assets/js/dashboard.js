@@ -21,7 +21,7 @@ async function loadUser() {
     const token = localStorage.getItem("token");
 
     try {
-        const res = await fetch("http://localhost:5000/api/profile", {
+        const res = await fetch("http://localhost:3000/api/profile", {
             headers: {
                 "Authorization": "Bearer " + token
             }
@@ -112,7 +112,7 @@ function formatDateTime(dateString) {
 // =========================
 async function loadCompany() {
     try {
-        const res = await fetch("http://localhost:5000/api/public/app-info");
+        const res = await fetch("http://localhost:3000/api/public/app-info");
 
         if (!res.ok) throw new Error("API not reachable");
 

@@ -1,647 +1,963 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <title id="pageTitle">Loading...</title>
+    <link id="appFavicon" rel="icon" href="assets/logo.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/home.css">
+    <style>
+        /* =========================================
+   TRUST BAR
+========================================= */
+        .trust-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            flex-wrap: wrap;
+        }
 
-<title id="pageTitle">Loading...</title>
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 32px;
+            border-right: 1px solid #f0f0f0;
+            flex: 1;
+            min-width: 180px;
+            justify-content: center;
+            transition: .2s;
+        }
 
-<link id="appFavicon" rel="icon" href="assets/logo.png">
+        .trust-item:last-child {
+            border-right: none;
+        }
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+        .trust-item:hover {
+            background: #fafafa;
+        }
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/home.css">
+        .trust-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .trust-icon.orange {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .trust-icon.green {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .trust-icon.blue {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .trust-icon.purple {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        .trust-text strong {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        .trust-text small {
+            font-size: 11px;
+            color: #777;
+        }
+
+        @media(max-width:768px) {
+            .trust-item {
+                padding: 12px 16px;
+            }
+        }
+
+        /* =========================================
+   FLASH SALE COUNTDOWN
+========================================= */
+        .flash-sale-section {
+            margin: 25px 15px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #0f172a, #1e1b4b, #312e81);
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flash-sale-section::before {
+            content: "";
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, .35), transparent 70%);
+            top: -100px;
+            right: -100px;
+            pointer-events: none;
+        }
+
+        .flash-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            z-index: 1;
+        }
+
+        .flash-bolt {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #111;
+            animation: pulseBolt 1.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulseBolt {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .flash-text h2 {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0 0 4px;
+        }
+
+        .flash-text p {
+            color: rgba(255, 255, 255, .65);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .flash-countdown {
+            display: flex;
+            gap: 10px;
+            z-index: 1;
+        }
+
+        .countdown-block {
+            background: rgba(255, 255, 255, .1);
+            border: 1px solid rgba(255, 255, 255, .15);
+            border-radius: 14px;
+            padding: 12px 16px;
+            text-align: center;
+            min-width: 64px;
+            backdrop-filter: blur(6px);
+        }
+
+        .countdown-num {
+            font-size: 28px;
+            font-weight: 900;
+            color: #fbbf24;
+            display: block;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .countdown-label {
+            font-size: 10px;
+            color: rgba(255, 255, 255, .55);
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .flash-btn {
+            border: none;
+            padding: 14px 28px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #111;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            transition: .25s;
+            z-index: 1;
+            white-space: nowrap;
+        }
+
+        .flash-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(251, 191, 36, .35);
+        }
+
+        @media(max-width:768px) {
+            .flash-sale-section {
+                flex-direction: column;
+                padding: 22px;
+            }
+
+            .flash-left {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .flash-countdown {
+                justify-content: center;
+            }
+        }
+
+        /* =========================================
+   TESTIMONIALS
+========================================= */
+        .testimonials-section {
+            padding: 40px 20px;
+            background: #f8faff;
+            margin-top: 30px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .section-header h2 {
+            font-size: 28px;
+            font-weight: 800;
+            color: #111;
+            margin: 0 0 8px;
+        }
+
+        .section-header p {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: .3s;
+            position: relative;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, .09);
+        }
+
+        .testimonial-quote {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            font-size: 48px;
+            color: #f3f4f6;
+            font-family: Georgia, serif;
+            line-height: 1;
+        }
+
+        .testimonial-stars {
+            color: #f59e0b;
+            font-size: 13px;
+            display: flex;
+            gap: 2px;
+        }
+
+        .testimonial-text {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.7;
+            flex: 1;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 14px;
+        }
+
+        .author-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .av-blue {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+        }
+
+        .av-green {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .av-purple {
+            background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+        }
+
+        .av-orange {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .author-info strong {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        .author-info span {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        /* =========================================
+   RECENTLY VIEWED
+========================================= */
+        .recently-section {
+            padding: 20px;
+            display: none;
+        }
+
+        .recently-section.has-items {
+            display: block;
+        }
+
+        .recently-row {
+            display: flex;
+            gap: 14px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scrollbar-width: none;
+            scroll-snap-type: x mandatory;
+        }
+
+        .recently-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        .recently-card {
+            min-width: 140px;
+            max-width: 140px;
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #eee;
+            padding: 12px;
+            cursor: pointer;
+            transition: .25s;
+            scroll-snap-align: start;
+            flex-shrink: 0;
+        }
+
+        .recently-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, .1);
+        }
+
+        .recently-card img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .recently-card h5 {
+            font-size: 12px;
+            font-weight: 600;
+            color: #111;
+            margin: 0 0 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .recently-card .r-price {
+            font-size: 13px;
+            font-weight: 800;
+            color: #d32f2f;
+        }
+
+        /* =========================================
+   BACK TO TOP
+========================================= */
+        #backToTop {
+            position: fixed;
+            bottom: 170px;
+            right: 18px;
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            background: #131921;
+            color: #fff;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 998;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity .3s ease, transform .3s ease;
+            pointer-events: none;
+        }
+
+        #backToTop.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        #backToTop:hover {
+            background: #4f46e5;
+            transform: translateY(-3px);
+        }
+
+        @media(max-width:768px) {
+            #backToTop {
+                bottom: 155px;
+                right: 14px;
+            }
+        }
+    </style>
 </head>
 
 <body>
-<!-- HEADER -->
-<header class="topbar">
-    <div class="brand">
-         <!-- ✅ ONLY LOGO HERE -->
-        <img id="logo" src="assets/logo.png">
-        <span id="companyName">E-Shop</span>
+
+    <!-- HEADER -->
+    <header class="topbar">
+        <div class="brand">
+            <img id="logo" src="assets/logo.png">
+            <span id="companyName">E-Shop</span>
+        </div>
+
+        <div class="search">
+            <i class="fa fa-search"></i>
+            <input id="search" placeholder="Search products...">
+        </div>
+
+        <!-- ALL CATEGORIES MENU -->
+        <div class="top-categories">
+            <button class="all-cat-btn" onclick="toggleCategoryMenu()">
+                <i class="fa fa-bars"></i>
+                <span>All Categories</span>
+                <i class="fa fa-chevron-down small-arrow"></i>
+            </button>
+
+            <div class="all-cat-dropdown" id="topCategoryLinks">
+                <div class="all-cat-item active" onclick="filterCat(null, this)">
+                    <div class="cat-icon"><i class="fa fa-layer-group"></i></div>
+                    <span>All Products</span>
+                </div>
+                <div id="dynamicTopCategories"></div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <!-- CUSTOMER MENU -->
+            <div class="customer-menu">
+                <button id="authBtn" class="customer-btn" onclick="Auth.toggleMenu(event)">
+                    <div class="customer-avatar"><i class="fa fa-user"></i></div>
+                    <div class="customer-info">
+                        <span class="customer-label">Account</span>
+                        <span id="authBtnText" class="customer-name">Sign In</span>
+                    </div>
+                    <i class="fa fa-chevron-down customer-arrow"></i>
+                </button>
+
+                <div id="customerDropdown" class="customer-dropdown">
+                    <div id="guestMenu" class="guest-menu">
+                        <button class="dropdown-btn signin-item" onclick="Auth.open()">
+                            <div class="menu-icon login-icon"><i class="fa fa-user-lock"></i></div>
+                            <div class="menu-text"><span>Sign In</span><small>Access your account</small></div>
+                            <i class="fa fa-chevron-right menu-arrow"></i>
+                        </button>
+                        <button class="dropdown-btn register-item" onclick="Auth.openRegister()">
+                            <div class="menu-icon register-icon"><i class="fa fa-user-plus"></i></div>
+                            <div class="menu-text"><span>Create Account</span><small>Register new profile</small></div>
+                            <i class="fa fa-chevron-right menu-arrow"></i>
+                        </button>
+                    </div>
+
+                    <div id="loggedMenu" class="logged-menu" style="display:none;">
+                        <button class="dropdown-btn signin-item" onclick="location.href='my-orders.html'">
+                            <div class="menu-icon orders-icon"><i class="fa fa-bag-shopping"></i></div>
+                            <div class="menu-text"><span>My Orders</span><small>Track your purchases</small></div>
+                            <i class="fa fa-chevron-right menu-arrow"></i>
+                        </button>
+                        <button class="dropdown-btn register-item" onclick="Auth.logout()">
+                            <div class="menu-icon logout-icon"><i class="fa fa-right-from-bracket"></i></div>
+                            <div class="menu-text"><span>Logout</span><small>Securely sign out</small></div>
+                            <i class="fa fa-chevron-right menu-arrow"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CART -->
+            <button class="icon-btn" onclick="UI.openCart()">
+                <i class="fa fa-cart-shopping"></i>
+                <span class="badge">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- =========================================
+     TRUST BAR  (NEW)
+========================================= -->
+    <div class="trust-bar">
+        <div class="trust-item">
+            <div class="trust-icon orange"><i class="fa fa-truck-fast"></i></div>
+            <div class="trust-text">
+                <strong>Free Delivery</strong>
+                <small>On orders over $50</small>
+            </div>
+        </div>
+        <div class="trust-item">
+            <div class="trust-icon green"><i class="fa fa-rotate-left"></i></div>
+            <div class="trust-text">
+                <strong>Easy Returns</strong>
+                <small>30-day hassle-free policy</small>
+            </div>
+        </div>
+        <div class="trust-item">
+            <div class="trust-icon blue"><i class="fa fa-shield-halved"></i></div>
+            <div class="trust-text">
+                <strong>Secure Payment</strong>
+                <small>256-bit SSL encryption</small>
+            </div>
+        </div>
+        <div class="trust-item">
+            <div class="trust-icon purple"><i class="fa fa-headset"></i></div>
+            <div class="trust-text">
+                <strong>24/7 Support</strong>
+                <small>Always here to help</small>
+            </div>
+        </div>
     </div>
 
-    <div class="search">
-        <i class="fa fa-search"></i>
-        <input id="search" placeholder="Search products...">
+    <!-- HERO BANNER -->
+    <div class="hero-banner">
+        <img src="assets/banners/banner.png" class="hero-banner-img">
     </div>
-<!-- =========================================
-     ALL CATEGORIES MENU
+
+    <!-- HERO BANNERS -->
+    <div class="hero-slider">
+
+        <!-- SUMMER SALE -->
+        <div class="hero-card hero-1" onclick="goToSection('offerProducts')">
+
+            <div class="hero-glow"></div>
+
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fa fa-fire"></i>
+                    Summer Collection
+                </div>
+
+                <h2>Big Summer Sale</h2>
+
+                <p>
+                    Save up to 50% on premium products
+                    with exclusive seasonal offers.
+                </p>
+
+                <div class="hero-link">
+                    Shop Collection
+                    <i class="fa fa-arrow-right"></i>
+                </div>
+            </div>
+
+            <img src="assets/img/bucket.png">
+        </div>
+
+        <!-- GROCERY -->
+        <div class="hero-card hero-2" onclick="goToSection('grocerySection')">
+
+            <div class="hero-glow"></div>
+
+            <div class="hero-content">
+                <div class="hero-badge green">
+                    <i class="fa fa-leaf"></i>
+                    Fresh Everyday
+                </div>
+
+                <h2>Fresh Grocery Deals</h2>
+
+                <p>
+                    Handpicked daily essentials delivered
+                    fresh to your doorstep.
+                </p>
+
+                <div class="hero-link">
+                    Explore Groceries
+                    <i class="fa fa-arrow-right"></i>
+                </div>
+            </div>
+
+            <img src="assets/img/bucketitems.png">
+        </div>
+
+    </div>
+
+    <!-- =========================================
+     FLASH SALE COUNTDOWN  (NEW)
+========================================= -->
+    <div class="flash-sale-section" id="flashSaleSection">
+        <div class="flash-left">
+            <div class="flash-bolt"><i class="fa fa-bolt"></i></div>
+            <div class="flash-text">
+                <h2>⚡ Flash Sale — Ending Soon!</h2>
+                <p>Grab these deals before time runs out</p>
+            </div>
+        </div>
+
+        <div class="flash-countdown">
+            <div class="countdown-block">
+                <span class="countdown-num" id="cd-hours">00</span>
+                <span class="countdown-label">Hours</span>
+            </div>
+            <div class="countdown-block">
+                <span class="countdown-num" id="cd-mins">00</span>
+                <span class="countdown-label">Mins</span>
+            </div>
+            <div class="countdown-block">
+                <span class="countdown-num" id="cd-secs">00</span>
+                <span class="countdown-label">Secs</span>
+            </div>
+        </div>
+
+        <button class="flash-btn"
+            onclick="window.scrollTo({top:document.getElementById('offerProducts').offsetTop - 80, behavior:'smooth'})">
+            <i class="fa fa-fire"></i> View Deals
+        </button>
+    </div>
+
+    <!-- CATEGORY BAR -->
+    <div id="categories" class="category-bar"></div>
+
+    <!-- OFFER PRODUCTS -->
+    <div id="offerProducts" class="offer-section"></div>
+
+    <!-- =========================================
+     PREMIUM GROCERY CATEGORY SECTION
 ========================================= -->
 
-<div class="top-categories">
+    <div class="grocery-wrapper">
 
-    <!-- MAIN BUTTON -->
-    <button class="all-cat-btn"
-            onclick="toggleCategoryMenu()">
+        <!-- Background Effects -->
+        <div class="bg-blob blob1"></div>
+        <div class="bg-blob blob2"></div>
 
-        <i class="fa fa-bars"></i>
+        <!-- Header -->
+        <div class="grocery-header">
 
-        <span>All Categories</span>
-
-        <i class="fa fa-chevron-down small-arrow"></i>
-
-    </button>
-
-    <!-- DROPDOWN -->
-    <div class="all-cat-dropdown"
-         id="topCategoryLinks">
-
-        <!-- ALL -->
-        <div class="all-cat-item active"
-             onclick="filterCat(null, this)">
-
-            <div class="cat-icon">
-                <i class="fa fa-layer-group"></i>
-            </div>
-
-            <span>All Products</span>
-
-        </div>
-
-        <!-- DYNAMIC -->
-        <div id="dynamicTopCategories"></div>
-
-    </div>
-
-</div>
-
-<div class="actions">
-
-   <!-- CUSTOMER MENU -->
-<div class="customer-menu">
-
-    <!-- MAIN BUTTON -->
-    <button id="authBtn"
-            class="customer-btn"
-            onclick="Auth.toggleMenu(event)">
-
-        <div class="customer-avatar">
-            <i class="fa fa-user"></i>
-        </div>
-
-        <div class="customer-info">
-
-            <span class="customer-label">
-                Account
+            <span class="grocery-tag">
+                Fresh Grocery Collections
             </span>
 
-            <span id="authBtnText"
-                  class="customer-name">
+            <h2>
+                Shop by Category
+            </h2>
 
-                Sign In
-
-            </span>
+            <p>
+                Fresh products, quick delivery, and everyday essentials
+                crafted for your modern shopping experience.
+            </p>
 
         </div>
 
-        <i class="fa fa-chevron-down customer-arrow"></i>
-
-    </button>
-
-    <!-- DROPDOWN -->
-    <div id="customerDropdown"
-         class="customer-dropdown">
-
-       <div id="guestMenu" class="guest-menu">
-
-    <button class="dropdown-btn signin-item"
-            onclick="Auth.open()">
-
-        <div class="menu-icon login-icon">
-            <i class="fa fa-user-lock"></i>
-        </div>
-
-        <div class="menu-text">
-            <span>Sign In</span>
-            <small>Access your account</small>
-        </div>
-
-        <i class="fa fa-chevron-right menu-arrow"></i>
-
-    </button>
-
-    <button class="dropdown-btn register-item"
-            onclick="Auth.openRegister()">
-
-        <div class="menu-icon register-icon">
-            <i class="fa fa-user-plus"></i>
-        </div>
-
-        <div class="menu-text">
-            <span>Create Account</span>
-            <small>Register new profile</small>
-        </div>
-
-        <i class="fa fa-chevron-right menu-arrow"></i>
-
-    </button>
-
-</div>
-
-        <div id="loggedMenu"
-     class="logged-menu"
-     style="display:none;">
-
-    <!-- MY ORDERS -->
-    <button class="dropdown-btn signin-item"
-            onclick="location.href='my-orders.html'">
-
-        <div class="menu-icon orders-icon">
-            <i class="fa fa-bag-shopping"></i>
-        </div>
-
-        <div class="menu-text">
-            <span>My Orders</span>
-            <small>Track your purchases</small>
-        </div>
-
-        <i class="fa fa-chevron-right menu-arrow"></i>
-
-    </button>
-
-    <!-- LOGOUT -->
-    <button class="dropdown-btn register-item"
-            onclick="Auth.logout()">
-
-        <div class="menu-icon logout-icon">
-            <i class="fa fa-right-from-bracket"></i>
-        </div>
-
-        <div class="menu-text">
-            <span>Logout</span>
-            <small>Securely sign out</small>
-        </div>
-
-        <i class="fa fa-chevron-right menu-arrow"></i>
-
-    </button>
-
-</div>
-
-    </div>
-
-</div>
-    <!-- CART -->
-    <button class="icon-btn"
-            onclick="UI.openCart()">
-
-        <i class="fa fa-cart-shopping"></i>
-
-        <span class="badge">0</span>
-
-    </button>
-
-</div>
-</header>
-
-<!-- HERO BANNER -->
-<div class="hero-banner">
-    <img src="assets/banners/banner.png" class="hero-banner-img">
-
-    <!-- <div class="hero-banner-content">
-        <h1>Big Summer Deals</h1>
-        <p>Up to 70% OFF on selected products</p>
-
-        <button onclick="window.scrollTo({top:700,behavior:'smooth'})">
-            Shop Now
-        </button>
-    </div> -->
-</div>
-
-<!-- HERO BANNERS -->
-<div class="hero-slider">
-
-    <div class="hero-card hero-1">
-        <div class="hero-overlay"></div>
-
-        <div class="hero-content">
-            <h2>Big Summer Sale</h2>
-            <p>Up to 50% OFF on selected products</p>
-            <button onclick="window.scrollTo({top:700,behavior:'smooth'})">
-                Shop Now
-            </button>
-        </div>
-
-        <img src="assets/img/bucket.png">
-    </div>
-
-    <div class="hero-card hero-2">
-        <div class="hero-overlay"></div>
-
-        <div class="hero-content">
-            <h2>Fresh Grocery Deals</h2>
-            <p>Daily essentials at the best prices</p>
-            <button onclick="window.scrollTo({top:700,behavior:'smooth'})">
-                Explore
-            </button>
-        </div>
-
-        <img src="assets/img/bucketitems.png">
-    </div>
-
-</div>
-
-<!-- CATEGORY BAR -->
-<div id="categories" class="category-bar"></div>
-
-<!-- OFFER PRODUCTS -->
-<div id="offerProducts" class="offer-section"></div>
-
-<!-- PRODUCTS -->
-<div id="products" class="container"></div>
-
-<!-- CART -->
-<div id="cartModal" class="modal">
-    <div class="cart-modal">
-
-        <!-- HEADER -->
-        <div class="cart-header">
-            <h2><i class="fa fa-cart-shopping"></i> My Cart</h2>
-            <button class="modal-close" onclick="UI.closeCart()">✕</button>
-        </div>
-
-        <!-- ITEMS -->
-        <div id="cartItems" class="cart-items"></div>
-
-        <!-- FOOTER -->
-        <div class="cart-footer">
-            <div id="cartTotal">0</div>
-            <button class="checkout" onclick="CustomerApp.goToCheckout()">
-                <i class="fa fa-credit-card"></i>
-    Checkout
-</button>
-        </div>
-
-    </div>
-</div>
-
-<!-- QUICK VIEW -->
-<div id="quickView" class="modal">
-    <div class="modal-card">
-
-        <!-- HEADER -->
-        <div class="modal-header">
-            <h3>Product Details</h3>
-            <button class="modal-close" onclick="Shop.closeQuick()">✕</button>
-        </div>
-
-        <!-- IMAGE -->
-        <div class="modal-image">
-            <img id="qImg">
-        </div>
-
-        <!-- BODY -->
-        <div class="modal-body">
-            <h3 id="qName"></h3>
-            <div id="unitLabel"></div>
-
-            <!-- QTY -->
-            <div class="qty-box">
-                <button onclick="Shop.qty(-1)">−</button>
-                <input id="qty" type="number" value="1" min="1" readonly>
-                <button onclick="Shop.qty(1)">+</button>
-            </div>
-
-            <!-- PRICE -->
-            <div id="qPrice" class="modal-price"></div>
-        </div>
-
-        <!-- FOOTER -->
-        <div class="modal-footer">
-            <button class="btn-primary" onclick="Shop.add()"><i class="fa fa-cart-plus"></i> Add to Cart</button>
-        </div>
-
-    </div>
-</div>
-
-<!-- AUTH MODAL -->
-<div id="authModal" class="modal">
-
-    <div class="modal-card auth-card">
-
-        <!-- HEADER -->
-        <div class="modal-header">
-
-            <h3 id="authTitle">
-                Customer Login
-            </h3>
-
-            <button class="modal-close"
-                    onclick="Auth.close()">
-                ✕
-            </button>
-
-        </div>
-
-        <!-- BODY -->
-        <div class="modal-body auth-body">
-
-            <input id="authName"
-                   placeholder="Full Name"
-                   style="display:none;">
-
-            <input id="authEmail"
-                   type="email"
-                   placeholder="Email Address">
-
-            <input id="authPassword"
-                   type="password"
-                   placeholder="Password">
-
-            <!-- LOGIN -->
-            <button id="loginBtn"
-                    class="btn-primary"
-                    onclick="Auth.login()">
-
-                <i class="fa fa-right-to-bracket"></i>
-
-                Login & Continue
-
-            </button>
-
-            <!-- REGISTER -->
-            <button id="registerBtn"
-                    class="btn-secondary"
-                    onclick="Auth.register()"
-                    style="display:none;">
-
-                <i class="fa fa-user-plus"></i>
-
-                Create Account
-
-            </button>
-
-            <!-- FORGOT -->
-            <button class="link-btn"
-                    onclick="Auth.forgotPassword()">
-
-                Forgot Password?
-
-            </button>
-
-            <!-- TOGGLE -->
-            <div class="auth-switch">
-
-                <span id="authSwitchText">
-                    New customer?
-                </span>
-
-                <a href="javascript:void(0)"
-                   onclick="Auth.toggleMode()"
-                   id="authSwitchBtn">
-
-                    Create Account
-
-                </a>
-
-            </div>
-
-            <div class="auth-divider">
-                OR
-            </div>
-
-            <!-- GOOGLE -->
-            <a href="http://localhost:5000/api/customer-auth/google"
-               class="google-btn">
-
-                <i class="fa-brands fa-google"></i>
-
-                Continue with Google
-
-            </a>
-
-        </div>
-
-    </div>
-
-</div>
-<div id="toast"></div>
-<!-- FLOATING ACTION BUTTONS -->
-<div id="floatingActions" class="floating-actions">
-
-    <!-- VIEW CART -->
-    <button class="floating-action cart-action"
-            onclick="UI.openCart()">
-
-        <i class="fa fa-cart-shopping"></i>
-
-        <span id="floatingCartCount">0</span>
-
-    </button>
-
-    <!-- CHECKOUT -->
-    <button class="floating-action checkout-action"
-            onclick="CustomerApp.goToCheckout()">
-
-        <i class="fa fa-credit-card"></i>
-
-    </button>
-
-</div>
-
-<script src="assets/js/customer-common.js"></script>
-<script src="assets/js/home.js"></script>
-
-<script>
-CustomerApp.init();
-</script>
-
-<!-- ========================= -->
-<!-- PREMIUM FOOTER -->
-<!-- ========================= -->
-<footer class="footer">
-
-    <!-- GLOW ORBS -->
-    <div class="footer-orb orb1"></div>
-    <div class="footer-orb orb2"></div>
-
-    <div class="footer-inner">
-
-        <!-- TOP -->
-        <div class="footer-top">
-
-            <!-- BRAND -->
-            <div class="footer-brand">
-
-                <div class="footer-logo-wrap">
-                    <img id="footerLogo"
-                         src="assets/logo.png"
-                         alt="Footer Logo">
-                </div>
-
-                <div class="footer-brand-name"
-                     id="footerName">
-                    Shop
-                </div>
-
-                <div class="footer-desc">
-                    Discover premium products with lightning-fast delivery,
-                    secure checkout, and exceptional customer support —
-                    all in one modern shopping experience.
-                </div>
-
-                <!-- NEWSLETTER -->
-                <div class="footer-newsletter">
-
-                    <input type="email"
-                           placeholder="Enter your email">
-
-                    <button>
-                        <i class="fa fa-paper-plane"></i>
+        <!-- Carousel Wrapper -->
+        <div class="grocery-carousel">
+
+            <div class="grocery-scroll">
+
+                <!-- =========================
+                 ORIGINAL ITEMS
+            ========================= -->
+
+                <!-- Vegetables -->
+                <div class="grocery-tile g1">
+                    <div class="grocery-glow"></div>
+
+                    <div class="grocery-img">
+                        <img src="assets/img/FreshVegetables.png" alt="">
+                    </div>
+
+                    <div class="grocery-info">
+                        <span class="mini-label">100+ Products</span>
+                        <h3>Fresh Vegetables</h3>
+                        <p>Farm fresh organic picks</p>
+                    </div>
+
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
                     </button>
-
                 </div>
 
-            </div>
+                <!-- Fruits -->
+                <div class="grocery-tile g2">
+                    <div class="grocery-glow"></div>
 
-            <!-- QUICK LINKS -->
-            <div class="footer-card">
+                    <div class="grocery-img">
+                        <img src="assets/img/SeasonalFruits.png" alt="">
+                    </div>
 
-                <div class="footer-col-title">
-                    Quick Links
+                    <div class="grocery-info">
+                        <span class="mini-label">80+ Products</span>
+                        <h3>Seasonal Fruits</h3>
+                        <p>Sweet & juicy fruits</p>
+                    </div>
+
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
                 </div>
 
-                <ul class="footer-links">
-                    <li>
-                        <a href="index.html">
-                            <i class="fa fa-house"></i>
-                            Home
-                        </a>
-                    </li>
+                <!-- Dairy -->
+                <div class="grocery-tile g3">
+                    <div class="grocery-glow"></div>
 
-                    <li>
-                        <a href="orders.html">
-                            <i class="fa fa-bag-shopping"></i>
-                            My Orders
-                        </a>
-                    </li>
+                    <div class="grocery-img">
+                        <img src="assets/img/DairyProducts.png" alt="">
+                    </div>
 
-                    <li>
-                        <a href="checkout.html">
-                            <i class="fa fa-credit-card"></i>
-                            Checkout
-                        </a>
-                    </li>
+                    <div class="grocery-info">
+                        <span class="mini-label">60+ Products</span>
+                        <h3>Dairy Products</h3>
+                        <p>Milk, cheese & more</p>
+                    </div>
 
-                    <li>
-                        <a href="login.html">
-                            <i class="fa fa-user"></i>
-                            Login / Register
-                        </a>
-                    </li>
-                </ul>
-
-            </div>
-
-            <!-- SUPPORT -->
-            <div class="footer-card">
-
-                <div class="footer-col-title">
-                    Customer Support
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
                 </div>
 
-                <ul class="footer-links">
+                <!-- Essentials -->
+                <div class="grocery-tile g4">
+                    <div class="grocery-glow"></div>
 
-                    <li>
-                        <a href="#">
-                            <i class="fa fa-circle-question"></i>
-                            Help Center
-                        </a>
-                    </li>
+                    <div class="grocery-img">
+                        <img src="assets/img/DailyEssentials.png" alt="">
+                    </div>
 
-                    <li>
-                        <a href="#">
-                            <i class="fa fa-truck-fast"></i>
-                            Track Order
-                        </a>
-                    </li>
+                    <div class="grocery-info">
+                        <span class="mini-label">150+ Products</span>
+                        <h3>Daily Essentials</h3>
+                        <p>All home essentials</p>
+                    </div>
 
-                    <li>
-                        <a href="#">
-                            <i class="fa fa-rotate-left"></i>
-                            Returns Policy
-                        </a>
-                    </li>
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
 
-                    <li>
-                        <a href="#">
-                            <i class="fa fa-headset"></i>
-                            Contact Us
-                        </a>
-                    </li>
+                <!-- Snacks -->
+                <div class="grocery-tile g5">
+                    <div class="grocery-glow"></div>
 
-                </ul>
+                    <div class="grocery-img">
+                        <img src="assets/img/snacks.png" alt="">
+                    </div>
 
-            </div>
+                    <div class="grocery-info">
+                        <span class="mini-label">90+ Products</span>
+                        <h3>Snacks & Beverages</h3>
+                        <p>Chips, drinks & treats</p>
+                    </div>
 
-        </div>
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
 
-        <!-- FEATURES -->
-        <div class="footer-features">
+                <!-- Personal Care -->
+                <div class="grocery-tile g6">
+                    <div class="grocery-glow"></div>
 
-            <div class="feature-pill">
-                <i class="fa fa-shield-halved"></i>
-                Secure Payments
-            </div>
+                    <div class="grocery-img">
+                        <img src="assets/img/personalcare.png" alt="">
+                    </div>
 
-            <div class="feature-pill">
-                <i class="fa fa-truck"></i>
-                Fast Delivery
-            </div>
+                    <div class="grocery-info">
+                        <span class="mini-label">70+ Products</span>
+                        <h3>Personal Care</h3>
+                        <p>Hygiene & beauty essentials</p>
+                    </div>
 
-            <div class="feature-pill">
-                <i class="fa fa-medal"></i>
-                Premium Quality
-            </div>
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
 
-            <div class="feature-pill">
-                <i class="fa fa-clock"></i>
-                24/7 Support
-            </div>
+                <!-- =========================
+                 DUPLICATE ITEMS
+                 (FOR INFINITE LOOP)
+            ========================= -->
 
-        </div>
+                <!-- Vegetables -->
+                <div class="grocery-tile g1">
+                    <div class="grocery-glow"></div>
 
-        <!-- BOTTOM -->
-        <div class="footer-bottom">
+                    <div class="grocery-img">
+                        <img src="assets/img/FreshVegetables.png" alt="">
+                    </div>
 
-            <div class="footer-copy">
+                    <div class="grocery-info">
+                        <span class="mini-label">100+ Products</span>
+                        <h3>Fresh Vegetables</h3>
+                        <p>Farm fresh organic picks</p>
+                    </div>
 
-                <span class="pulse-dot"></span>
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
 
-                © <span id="footerYear"></span>
+                <!-- Fruits -->
+                <div class="grocery-tile g2">
+                    <div class="grocery-glow"></div>
 
-                <span id="footerCompany">
-                    Shop
-                </span>
+                    <div class="grocery-img">
+                        <img src="assets/img/SeasonalFruits.png" alt="">
+                    </div>
 
-                · All Rights Reserved
+                    <div class="grocery-info">
+                        <span class="mini-label">80+ Products</span>
+                        <h3>Seasonal Fruits</h3>
+                        <p>Sweet & juicy fruits</p>
+                    </div>
 
-            </div>
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
 
-            <!-- SOCIALS -->
-            <div class="footer-socials">
+                <!-- Dairy -->
+                <div class="grocery-tile g3">
+                    <div class="grocery-glow"></div>
 
-                <a href="#" class="social-btn">
-                    <i class="fab fa-instagram"></i>
-                </a>
+                    <div class="grocery-img">
+                        <img src="assets/img/DairyProducts.png" alt="">
+                    </div>
 
-                <a href="#" class="social-btn">
-                    <i class="fab fa-twitter"></i>
-                </a>
+                    <div class="grocery-info">
+                        <span class="mini-label">60+ Products</span>
+                        <h3>Dairy Products</h3>
+                        <p>Milk, cheese & more</p>
+                    </div>
 
-                <a href="#" class="social-btn">
-                    <i class="fab fa-facebook-f"></i>
-                </a>
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
 
-                <a href="#" class="social-btn">
-                    <i class="fab fa-whatsapp"></i>
-                </a>
+                <!-- Essentials -->
+                <div class="grocery-tile g4">
+                    <div class="grocery-glow"></div>
 
-                <a href="#" class="social-btn">
-                    <i class="fab fa-tiktok"></i>
-                </a>
+                    <div class="grocery-img">
+                        <img src="assets/img/DailyEssentials.png" alt="">
+                    </div>
+
+                    <div class="grocery-info">
+                        <span class="mini-label">150+ Products</span>
+                        <h3>Daily Essentials</h3>
+                        <p>All home essentials</p>
+                    </div>
+
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Snacks -->
+                <div class="grocery-tile g5">
+                    <div class="grocery-glow"></div>
+
+                    <div class="grocery-img">
+                        <img src="assets/img/snacks.png" alt="">
+                    </div>
+
+                    <div class="grocery-info">
+                        <span class="mini-label">90+ Products</span>
+                        <h3>Snacks & Beverages</h3>
+                        <p>Chips, drinks & treats</p>
+                    </div>
+
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Personal Care -->
+                <div class="grocery-tile g6">
+                    <div class="grocery-glow"></div>
+
+                    <div class="grocery-img">
+                        <img src="assets/img/personalcare.png" alt="">
+                    </div>
+
+                    <div class="grocery-info">
+                        <span class="mini-label">70+ Products</span>
+                        <h3>Personal Care</h3>
+                        <p>Hygiene & beauty essentials</p>
+                    </div>
+
+                    <button class="grocery-add">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
 
             </div>
 
@@ -649,6 +965,433 @@ CustomerApp.init();
 
     </div>
 
-</footer>
+    <!-- PRODUCTS -->
+    <div id="products" class="container"></div>
+
+    <!-- =========================================
+     RECENTLY VIEWED  (NEW)
+========================================= -->
+    <div class="recently-section" id="recentlySection">
+        <div class="section-title" style="margin-bottom:14px;">
+            <div class="section-left">
+                <span class="section-icon"><i class="fa fa-clock-rotate-left"></i></span>
+                <span class="section-text">Recently Viewed</span>
+            </div>
+            <div class="section-line"></div>
+        </div>
+        <div class="recently-row" id="recentlyRow"></div>
+    </div>
+
+    <!-- =========================================
+     TESTIMONIALS  (NEW)
+========================================= -->
+    <div class="testimonials-section">
+        <div class="section-header">
+            <h2>⭐ What Our Customers Say</h2>
+            <p>Trusted by thousands of happy shoppers every day</p>
+        </div>
+
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-quote">"</div>
+                <div class="testimonial-stars">
+                    <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+                        class="fa fa-star"></i><i class="fa fa-star"></i>
+                </div>
+                <p class="testimonial-text">Absolutely love shopping here! The products arrived super fast and were
+                    exactly as described. Will definitely order again.</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar av-blue">S</div>
+                    <div class="author-info">
+                        <strong>Sarah M.</strong>
+                        <span>Verified Buyer · 2 days ago</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="testimonial-quote">"</div>
+                <div class="testimonial-stars">
+                    <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+                        class="fa fa-star"></i><i class="fa fa-star"></i>
+                </div>
+                <p class="testimonial-text">Best prices I've found online. The grocery section is amazing — fresh,
+                    well-packed and delivered on time. 10/10 experience.</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar av-green">A</div>
+                    <div class="author-info">
+                        <strong>Ahmed K.</strong>
+                        <span>Verified Buyer · 5 days ago</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="testimonial-quote">"</div>
+                <div class="testimonial-stars">
+                    <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+                        class="fa fa-star"></i><i class="fa fa-star-half-stroke"></i>
+                </div>
+                <p class="testimonial-text">Customer support was incredibly helpful when I had an issue. They resolved
+                    it within hours. The checkout process is so smooth too.</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar av-purple">R</div>
+                    <div class="author-info">
+                        <strong>Riya P.</strong>
+                        <span>Verified Buyer · 1 week ago</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="testimonial-quote">"</div>
+                <div class="testimonial-stars">
+                    <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+                        class="fa fa-star"></i><i class="fa fa-star"></i>
+                </div>
+                <p class="testimonial-text">The flash sale deals are real and the quality is top-notch. I saved so much
+                    on electronics. This is now my go-to store!</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar av-orange">J</div>
+                    <div class="author-info">
+                        <strong>James L.</strong>
+                        <span>Verified Buyer · 2 weeks ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CART -->
+    <div id="cartModal" class="modal">
+        <div class="cart-modal">
+            <div class="cart-header">
+                <h2><i class="fa fa-cart-shopping"></i> My Cart</h2>
+                <button class="modal-close" onclick="UI.closeCart()">✕</button>
+            </div>
+            <div id="cartItems" class="cart-items"></div>
+            <div class="cart-footer">
+                <div id="cartTotal">0</div>
+                <button class="checkout" onclick="CustomerApp.goToCheckout()">
+                    <i class="fa fa-credit-card"></i> Checkout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK VIEW -->
+    <div id="quickView" class="modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Product Details</h3>
+                <button class="modal-close" onclick="Shop.closeQuick()">✕</button>
+            </div>
+            <div class="modal-image"><img id="qImg"></div>
+            <div class="modal-body">
+                <h3 id="qName"></h3>
+                <div id="unitLabel"></div>
+                <div class="qty-box">
+                    <button onclick="Shop.qty(-1)">−</button>
+                    <input id="qty" type="number" value="1" min="1" readonly>
+                    <button onclick="Shop.qty(1)">+</button>
+                </div>
+                <div id="qPrice" class="modal-price"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="Shop.add()"><i class="fa fa-cart-plus"></i> Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="authModal" class="modal">
+        <div class="modal-card auth-card">
+            <div class="modal-header">
+                <h3 id="authTitle">Customer Login</h3>
+                <button class="modal-close" onclick="Auth.close()">✕</button>
+            </div>
+            <div class="modal-body auth-body">
+                <input id="authName" placeholder="Full Name" style="display:none;">
+                <input id="authEmail" type="email" placeholder="Email Address">
+                <input id="authPassword" type="password" placeholder="Password">
+                <button id="loginBtn" class="btn-primary" onclick="Auth.login()">
+                    <i class="fa fa-right-to-bracket"></i> Login & Continue
+                </button>
+                <button id="registerBtn" class="btn-secondary" onclick="Auth.register()" style="display:none;">
+                    <i class="fa fa-user-plus"></i> Create Account
+                </button>
+                <button class="link-btn" onclick="Auth.forgotPassword()">Forgot Password?</button>
+                <div class="auth-switch">
+                    <span id="authSwitchText">New customer?</span>
+                    <a href="javascript:void(0)" onclick="Auth.toggleMode()" id="authSwitchBtn">Create Account</a>
+                </div>
+                <div class="auth-divider">OR</div>
+                <a href="http://localhost:3000/api/customer-auth/google" class="google-btn">
+                    <i class="fa-brands fa-google"></i> Continue with Google
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <!-- FLOATING ACTION BUTTONS -->
+    <div id="floatingActions" class="floating-actions">
+        <button class="floating-action cart-action" onclick="UI.openCart()">
+            <i class="fa fa-cart-shopping"></i>
+            <span id="floatingCartCount">0</span>
+        </button>
+        <button class="floating-action checkout-action" onclick="CustomerApp.goToCheckout()">
+            <i class="fa fa-credit-card"></i>
+        </button>
+    </div>
+
+    <!-- =========================================
+     BACK TO TOP BUTTON  (NEW)
+========================================= -->
+    <button id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">
+        <i class="fa fa-chevron-up"></i>
+    </button>
+
+    <script src="assets/js/customer-common.js"></script>
+    <script src="assets/js/home.js"></script>
+
+    <script>
+        CustomerApp.init();
+
+        /* =========================================
+           FLASH SALE COUNTDOWN TIMER
+        ========================================= */
+        (function () {
+            // Set sale end time to midnight + 8 hours from page load (demo)
+            // Replace this with a real server timestamp for production
+            const stored = sessionStorage.getItem('flashSaleEnd');
+            let end;
+            if (stored) {
+                end = new Date(parseInt(stored));
+            } else {
+                end = new Date(Date.now() + 8 * 60 * 60 * 1000);
+                sessionStorage.setItem('flashSaleEnd', end.getTime());
+            }
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+
+            function tick() {
+                const diff = end - Date.now();
+                if (diff <= 0) {
+                    document.getElementById('flashSaleSection').style.display = 'none';
+                    return;
+                }
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                document.getElementById('cd-hours').textContent = pad(h);
+                document.getElementById('cd-mins').textContent = pad(m);
+                document.getElementById('cd-secs').textContent = pad(s);
+            }
+
+            tick();
+            setInterval(tick, 1000);
+        })();
+
+        /* =========================================
+           RECENTLY VIEWED PRODUCTS
+        ========================================= */
+        const RecentlyViewed = {
+            KEY: 'recentlyViewed',
+            MAX: 10,
+
+            add(product) {
+                let list = this.get();
+                list = list.filter(p => p.ProductID !== product.ProductID);
+                list.unshift({
+                    ProductID: product.ProductID,
+                    Name: product.Name,
+                    Price: product.Price,
+                    Image: product.Image || 'assets/img/no-image.png'
+                });
+                list = list.slice(0, this.MAX);
+                localStorage.setItem(this.KEY, JSON.stringify(list));
+                this.render();
+            },
+
+            get() {
+                try { return JSON.parse(localStorage.getItem(this.KEY)) || []; }
+                catch { return []; }
+            },
+
+            render() {
+                const list = this.get();
+                const section = document.getElementById('recentlySection');
+                const row = document.getElementById('recentlyRow');
+                if (!section || !row) return;
+
+                if (list.length === 0) {
+                    section.classList.remove('has-items');
+                    return;
+                }
+
+                section.classList.add('has-items');
+                row.innerHTML = list.map(p => `
+            <div class="recently-card" onclick="Shop.open(${p.ProductID})">
+                <img src="${p.Image}" alt="${p.Name}">
+                <h5>${p.Name}</h5>
+                <div class="r-price">${typeof CustomerApp !== 'undefined' ? CustomerApp.CURRENCY_SYMBOL : '$'}${parseFloat(p.Price).toFixed(2)}</div>
+            </div>
+        `).join('');
+            }
+        };
+
+        // Render recently viewed on load
+        window.addEventListener('load', () => {
+            setTimeout(() => RecentlyViewed.render(), 500);
+        });
+
+        // Hook into Shop.open to track viewed products
+        const _origOpen = Shop.open.bind(Shop);
+        Shop.open = function (id) {
+            _origOpen(id);
+            const p = typeof PRODUCTS !== 'undefined' ? PRODUCTS.find(x => x.ProductID == id) : null;
+            if (p) RecentlyViewed.add(p);
+        };
+
+        /* =========================================
+           BACK TO TOP BUTTON
+        ========================================= */
+        (function () {
+            const btn = document.getElementById('backToTop');
+            if (!btn) return;
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 400) {
+                    btn.classList.add('visible');
+                } else {
+                    btn.classList.remove('visible');
+                }
+            }, { passive: true });
+        })();
+
+        /* =========================================
+           FOOTER YEAR
+        ========================================= */
+        const fy = document.getElementById('footerYear');
+        if (fy) fy.textContent = new Date().getFullYear();
+
+        /* =========================================
+           HERO SECTION NAVIGATION
+        ========================================= */
+
+        function goToSection(id) {
+
+            const section = document.getElementById(id);
+
+            if (!section) return;
+
+            window.scrollTo({
+                top: section.offsetTop - 90,
+                behavior: 'smooth'
+            });
+
+            // Optional glow effect
+            section.classList.add('section-highlight');
+
+            setTimeout(() => {
+                section.classList.remove('section-highlight');
+            }, 1600);
+        }
+
+        function openCategory(category) {
+
+            console.log("Opening category:", category);
+
+            // OPTIONAL:
+            // filter your products here
+
+            const productsSection = document.getElementById('products');
+
+            if (productsSection) {
+
+                window.scrollTo({
+                    top: productsSection.offsetTop - 90,
+                    behavior: 'smooth'
+                });
+
+                productsSection.classList.add('section-highlight');
+
+                setTimeout(() => {
+                    productsSection.classList.remove('section-highlight');
+                }, 1200);
+            }
+        }
+    </script>
+
+    <!-- PREMIUM FOOTER -->
+    <footer class="footer">
+        <div class="footer-orb orb1"></div>
+        <div class="footer-orb orb2"></div>
+
+        <div class="footer-inner">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <div class="footer-logo-wrap">
+                        <img id="footerLogo" src="assets/logo.png" alt="Footer Logo">
+                    </div>
+                    <div class="footer-brand-name" id="footerName">Shop</div>
+                    <div class="footer-desc">
+                        Discover premium products with lightning-fast delivery,
+                        secure checkout, and exceptional customer support —
+                        all in one modern shopping experience.
+                    </div>
+                    <div class="footer-newsletter">
+                        <input type="email" placeholder="Enter your email">
+                        <button><i class="fa fa-paper-plane"></i></button>
+                    </div>
+                </div>
+
+                <div class="footer-card">
+                    <div class="footer-col-title">Quick Links</div>
+                    <ul class="footer-links">
+                        <li><a href="index.html"><i class="fa fa-house"></i> Home</a></li>
+                        <li><a href="my-orders.html"><i class="fa fa-bag-shopping"></i> My Orders</a></li>
+                        <li><a href="checkout.html"><i class="fa fa-credit-card"></i> Checkout</a></li>
+                        <li><a href="login.html"><i class="fa fa-user"></i> Login / Register</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-card">
+                    <div class="footer-col-title">Customer Support</div>
+                    <ul class="footer-links">
+                        <li><a href="#"><i class="fa fa-circle-question"></i> Help Center</a></li>
+                        <li><a href="#"><i class="fa fa-truck-fast"></i> Track Order</a></li>
+                        <li><a href="#"><i class="fa fa-rotate-left"></i> Returns Policy</a></li>
+                        <li><a href="#"><i class="fa fa-headset"></i> Contact Us</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-features">
+                <div class="feature-pill"><i class="fa fa-shield-halved"></i> Secure Payments</div>
+                <div class="feature-pill"><i class="fa fa-truck"></i> Fast Delivery</div>
+                <div class="feature-pill"><i class="fa fa-medal"></i> Premium Quality</div>
+                <div class="feature-pill"><i class="fa fa-clock"></i> 24/7 Support</div>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="footer-copy">
+                    <span class="pulse-dot"></span>
+                    © <span id="footerYear"></span>
+                    <span id="footerCompany">Shop</span>
+                    · All Rights Reserved
+                </div>
+                <div class="footer-socials">
+                    <a href="#" class="social-btn"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-btn"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="social-btn"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="social-btn"><i class="fab fa-whatsapp"></i></a>
+                    <a href="#" class="social-btn"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
+
 </html>

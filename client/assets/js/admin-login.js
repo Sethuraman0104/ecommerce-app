@@ -2,7 +2,7 @@ async function loadAppInfo() {
     try {
         console.log("Loading app info...");
 
-        const res = await fetch("http://localhost:5000/api/public/app-info");
+        const res = await fetch("http://localhost:3000/api/public/app-info");
 
         if (!res.ok) throw new Error("API not reachable");
 
@@ -83,7 +83,7 @@ document.getElementById("loginForm")?.addEventListener("submit", async (e) => {
     const password = document.getElementById("password")?.value;
 
     try {
-        const res = await fetch("http://localhost:5000/api/auth/login", {
+        const res = await fetch("http://localhost:3000/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password })
@@ -199,7 +199,7 @@ async function sendReset() {
     }
 
     try {
-        const res = await fetch("http://localhost:5000/api/auth/forgot-password", {
+        const res = await fetch("http://localhost:3000/api/auth/forgot-password", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email })
