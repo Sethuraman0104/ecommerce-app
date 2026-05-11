@@ -15,23 +15,33 @@
 
 <body>
 
-<header class="topbar">
-    <div class="brand">
+ <header class="checkout-topbar">
+
+    <!-- LEFT: BRAND -->
+    <div class="checkout-brand">
         <img id="logo" src="assets/logo.png">
         <span id="companyName">E-Shop</span>
     </div>
 
-    <div class="page-title-header">
-        <i class="fa fa-credit-card"></i> Checkout
+    <!-- CENTER: TITLE -->
+    <div class="checkout-title">
+        <i class="fa fa-credit-card"></i>
+        <span>Checkout</span>
     </div>
 
-    <div class="actions">
-        <div id="userBox" class="user-box"></div>
+    <!-- RIGHT: USER + BACK -->
+    <div class="checkout-actions">
 
-        <button class="icon-btn" onclick="goHome()">
+        <!-- USER BOX -->
+        <div class="checkout-user" id="userBox"></div>
+
+        <!-- BACK BUTTON -->
+        <button class="checkout-back-btn" onclick="goHome()">
             <i class="fa fa-arrow-left"></i>
         </button>
+
     </div>
+
 </header>
 
 <div class="checkout-container">

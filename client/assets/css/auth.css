@@ -615,3 +615,164 @@ body{
   from{ width:100%; }
   to{ width:0%; }
 }
+
+/* =========================================
+   RESPONSIVE UPGRADE (LOGIN PAGE FIX)
+========================================= */
+
+/* prevent horizontal scroll issues */
+html, body {
+    overflow-x: hidden;
+}
+
+/* ================= DESKTOP SAFETY ================= */
+.wrapper {
+    flex-wrap: nowrap;
+}
+
+/* ================= TABLET FIX ================= */
+@media (max-width: 1024px) {
+
+    .card {
+        width: 340px;
+        padding: 30px;
+    }
+
+    .brand h1 {
+        font-size: 28px;
+    }
+
+    .logo img {
+        width: 90px;
+    }
+}
+
+/* ================= MOBILE LAYOUT (MAIN CHANGE) ================= */
+@media (max-width: 900px) {
+
+    body {
+        overflow-y: auto;
+    }
+
+    /* stack layout */
+    .wrapper {
+        flex-direction: column;
+        height: auto;
+    }
+
+    /* LEFT becomes top banner */
+    .left {
+        display: flex !important;
+        height: auto;
+        min-height: 220px;
+        padding: 20px;
+    }
+
+    .brand {
+        transform: scale(0.9);
+    }
+
+    .brand h1 {
+        font-size: 22px;
+    }
+
+    .logo img {
+        width: 80px;
+    }
+
+    /* hide heavy effects on mobile */
+    .pattern,
+    .glass-orb {
+        display: none;
+    }
+
+    /* RIGHT full width */
+    .right {
+        width: 100%;
+        padding: 20px;
+    }
+
+    .card {
+        width: 100%;
+        max-width: 420px;
+        padding: 25px;
+        margin: auto;
+        border-radius: 16px;
+    }
+
+    /* inputs bigger touch targets */
+    .field input {
+        padding: 16px 44px;
+        font-size: 14px;
+    }
+
+    .btn {
+        padding: 16px;
+        font-size: 15px;
+    }
+}
+
+/* ================= SMALL MOBILE ================= */
+@media (max-width: 500px) {
+
+    .top-bar {
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+
+    .brand h1 {
+        font-size: 18px;
+    }
+
+    .logo img {
+        width: 70px;
+    }
+
+    .card {
+        padding: 20px;
+        border-radius: 14px;
+    }
+
+    .field {
+        margin: 18px 0;
+    }
+
+    .field label {
+        font-size: 12px;
+    }
+
+    .btn {
+        font-size: 14px;
+    }
+}
+
+/* ================= MODAL MOBILE FIX ================= */
+@media (max-width: 500px) {
+
+    .modal-box {
+        width: 92%;
+        padding: 20px;
+    }
+
+    .modal-box h3 {
+        font-size: 18px;
+    }
+
+    .modal-input input {
+        font-size: 14px;
+    }
+}
+
+/* ================= TOAST MOBILE FIX ================= */
+@media (max-width: 500px) {
+
+    .toast-container {
+        right: 10px;
+        left: 10px;
+    }
+
+    .toast {
+        min-width: auto;
+        width: 100%;
+    }
+}

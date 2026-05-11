@@ -273,23 +273,26 @@ async init() {
         }
     },
 
-    /* ================= USER ================= */
-    renderUserBox() {
+    /* ================= USER RENDER ================= */
+renderUserBox() {
 
-        const box = document.getElementById("userBox");
-        const c = CustomerApp.CUSTOMER;
+    const box = document.getElementById("userBox");
+    const c = CustomerApp.CUSTOMER;
 
-        box.innerHTML = c ? `
-            <div class="user-info">
-                <i class="fa fa-user-circle"></i>
-                <div>
-                    <div class="user-name">${c.FullName}</div>
-                    <div class="user-email">${c.Email}</div>
-                </div>
-            </div>
-            <button class="logout-btn" onclick="CustomerApp.logout()">Logout</button>
-        ` : `<button class="btn-primary">Login</button>`;
-    },
+    if (!c) {
+        box.innerHTML = `
+            <button class="checkout-login-btn" onclick="location.href='login.html'">
+                <i class="fa fa-sign-in-alt"></i>
+            </button>
+        `;
+        return;
+    }
+
+    box.innerHTML = `
+        <i class="fa fa-user-circle checkout-user-icon"></i>
+        <div class="checkout-user-name">${c.FullName}</div>
+    `;
+},
 
     /* ================= SETTINGS ================= */
     async loadSettings() {

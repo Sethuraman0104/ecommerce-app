@@ -77,6 +77,9 @@ READY_RESOLVE: null,
     goToProfile() {
     window.location.href = "profile.html";
     },
+    toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('active');
+},
     sessionExpired() {
 
         this.logout(); // clear storage immediately

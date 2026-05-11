@@ -216,8 +216,30 @@ function filterCat(id, el) {
 }
 
 /* ================= SEARCH ================= */
+let searchScrollTimeout;
+
 document.getElementById("search")
-    ?.addEventListener("input", renderGrouped);
+?.addEventListener("input", function () {
+
+    isSearching = this.value.trim().length > 0;
+
+    renderGrouped();
+
+    clearTimeout(searchScrollTimeout);
+
+    searchScrollTimeout = setTimeout(() => {
+
+        if (isSearching) {
+
+            document.getElementById("products")
+                ?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+        }
+
+    }, 200);
+});
 
 /* ================= CATEGORY ICONS ================= */
 const CATEGORY_ICONS = {

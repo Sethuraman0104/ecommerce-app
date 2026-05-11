@@ -12,10 +12,32 @@ const app = express();
 app.set('trust proxy', 1);
 
 /* =========================
-   CORS (Production safe)
+   ENVIRONMENT
 ========================= */
+const isProduction = process.env.NODE_ENV === "production";
+
+/* =========================
+   CORS (Local + Production)
+========================= */
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://hrinfo-ecommerece.onrender.com'
+];
+
 app.use(cors({
-    origin: "*",
+    origin: function (origin, callback) {
+
+        // Allow Postman/mobile apps/no-origin requests
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.log("Blocked by CORS:", origin);
+            callback(new Error('CORS Not Allowed'));
+        }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
@@ -24,13 +46,19 @@ app.use(cors({
    BODY PARSER
 ========================= */
 app.use(express.json({ limit: "25mb" }));
-app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+app.use(express.urlencoded({
+    extended: true,
+    limit: "25mb"
+}));
 
 /* =========================
    STATIC FILES
 ========================= */
 app.use(express.static(path.join(__dirname, '../client')));
-app.use('/assets', express.static(path.join(__dirname, '../client/assets')));
+
+app.use('/assets',
+    express.static(path.join(__dirname, '../client/assets'))
+);
 
 /* =========================
    PASSPORT
@@ -54,10 +82,14 @@ app.use('/api/public', require('./routes/public'));
 app.use('/api/profile', require('./routes/profile'));
 
 /* =========================
-   HEALTH CHECK (IMPORTANT FOR RENDER)
+   HEALTH CHECK
 ========================= */
 app.get('/health', (req, res) => {
-    res.json({ status: "OK", time: new Date() });
+    res.json({
+        status: "OK",
+        environment: isProduction ? "Production" : "Development",
+        time: new Date()
+    });
 });
 
 /* =========================
@@ -68,20 +100,54 @@ app.get('/', (req, res) => {
 });
 
 /* =========================
-   ERROR HANDLER
+   404 HANDLER
 ========================= */
-app.use((err, req, res, next) => {
-    console.error("SERVER ERROR:", err);
-    res.status(500).json({ message: "Internal server error" });
+app.use((req, res) => {
+    res.status(404).json({
+        message: "Route not found"
+    });
 });
 
 /* =========================
-   START SERVER (RENDER FIX)
+   ERROR HANDLER
+========================= */
+app.use((err, req, res, next) => {
+
+    console.error("SERVER ERROR:", err);
+
+    res.status(500).json({
+        message: err.message || "Internal server error"
+    });
+});
+
+/* =========================
+   START SERVER
 ========================= */
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🟢 Server running on port ${PORT}`);
-    console.log(`🏠 Home: https://hrinfo-ecommerece.onrender.com`);
-    console.log(`🔐 Admin: https://hrinfo-ecommerece.onrender.com/admin-login.html`);
+// Use localhost for local development
+const HOST = isProduction ? '0.0.0.0' : 'localhost';
+
+app.listen(PORT, HOST, () => {
+
+    console.log('===================================');
+    console.log(`🟢 Server running successfully`);
+    console.log(`🌍 Environment: ${isProduction ? 'Production' : 'Development'}`);
+    console.log(`🚀 Server URL: http://${HOST}:${PORT}`);
+    console.log('===================================');
+
+    if (isProduction) {
+
+        console.log(`🏠 Home: https://hrinfo-ecommerece.onrender.com`);
+        console.log(`🔐 Admin: https://hrinfo-ecommerece.onrender.com/admin-login.html`);
+
+    } else {
+
+        console.log(`🏠 Home: http://localhost:${PORT}`);
+        console.log(`🔐 Admin: http://localhost:${PORT}/admin-login.html`);
+
+    }
+
+    console.log('===================================');
+
 });
