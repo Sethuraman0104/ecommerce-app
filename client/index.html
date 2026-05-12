@@ -1140,9 +1140,10 @@
                     <a href="javascript:void(0)" onclick="Auth.toggleMode()" id="authSwitchBtn">Create Account</a>
                 </div>
                 <div class="auth-divider">OR</div>
-                <a href=`${CONFIG.API_BASE}/customer-auth/google` class="google-btn">
-                    <i class="fa-brands fa-google"></i> Continue with Google
-                </a>
+                <a id="googleLoginBtn" class="google-btn">
+    <i class="fa-brands fa-google"></i>
+    Continue with Google
+</a>
             </div>
         </div>
     </div>
@@ -1172,6 +1173,8 @@
 
     <script>
         CustomerApp.init();
+        document.getElementById("googleLoginBtn").href =
+    `${CONFIG.API_BASE}/api/customer-auth/google`;
 
         /* =========================================
            FLASH SALE COUNTDOWN TIMER
