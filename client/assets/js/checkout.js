@@ -665,6 +665,45 @@ renderUserBox() {
         </label>
     `).join("");
 
+    // ==========================
+// PAYMENT METHOD CHANGE
+// ==========================
+const radios = modal.querySelectorAll(
+    "input[name='paymentMethod']"
+);
+
+radios.forEach(radio => {
+
+    radio.addEventListener("change", (e) => {
+
+        const method = e.target.value;
+
+        const cardForm =
+            document.getElementById("cardForm");
+
+        if (!cardForm) return;
+
+        // SHOW CARD SECTION
+        if (method === "Card") {
+
+            cardForm.style.display = "block";
+
+            // smooth animation
+            cardForm.style.opacity = "0";
+
+            setTimeout(() => {
+                cardForm.style.transition = "0.25s ease";
+                cardForm.style.opacity = "1";
+            }, 10);
+
+        } else {
+
+            cardForm.style.display = "none";
+        }
+    });
+
+});
+
         modal.style.display = "flex";
     },
     getPaymentLabel(method) {
@@ -789,7 +828,6 @@ renderUserBox() {
         }
     }
 };
-
 /* ================= INIT ================= */
 window.onload = () => Checkout.init();
 

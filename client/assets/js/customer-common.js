@@ -293,6 +293,27 @@ loadUserUI() {
         avatarEl.innerText = first;
     }
 
+    // -------------------------
+// FOOTER LOGIN LINK
+// -------------------------
+const footerAuthLink =
+    document.getElementById("footerAuthLink");
+
+if (footerAuthLink) {
+
+    if (this.isLoggedIn()) {
+
+        // hide when logged in
+        footerAuthLink.style.display = "none";
+
+    } else {
+
+        // show when guest
+        footerAuthLink.style.display = "";
+
+    }
+}
+
     console.log("👤 User UI Loaded:", userName);
 },
 

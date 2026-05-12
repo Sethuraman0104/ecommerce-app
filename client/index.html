@@ -483,7 +483,21 @@
 
         <div class="search">
             <i class="fa fa-search"></i>
-            <input id="search" placeholder="Search products...">
+            <input
+    type="search"
+    id="productSearch"
+    class="search-input"
+
+    placeholder="Search products..."
+    value=""
+
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
+
+    readonly
+/>
         </div>
 
         <!-- ALL CATEGORIES MENU -->
@@ -495,7 +509,7 @@
             </button>
 
             <div class="all-cat-dropdown" id="topCategoryLinks">
-                <div class="all-cat-item active" onclick="filterCat(null, this)">
+                <div class="all-cat-item active" onclick="closeCategoryMenu(); filterCat(null, this)">
                     <div class="cat-icon"><i class="fa fa-layer-group"></i></div>
                     <span>All Products</span>
                 </div>
@@ -517,12 +531,12 @@
 
                 <div id="customerDropdown" class="customer-dropdown">
                     <div id="guestMenu" class="guest-menu">
-                        <button class="dropdown-btn signin-item" onclick="Auth.open()">
+                        <button class="dropdown-btn signin-item" onclick="closeCustomerMenu(); Auth.open()">
                             <div class="menu-icon login-icon"><i class="fa fa-user-lock"></i></div>
                             <div class="menu-text"><span>Sign In</span><small>Access your account</small></div>
                             <i class="fa fa-chevron-right menu-arrow"></i>
                         </button>
-                        <button class="dropdown-btn register-item" onclick="Auth.openRegister()">
+                        <button class="dropdown-btn register-item" onclick="closeCustomerMenu(); Auth.openRegister()">
                             <div class="menu-icon register-icon"><i class="fa fa-user-plus"></i></div>
                             <div class="menu-text"><span>Create Account</span><small>Register new profile</small></div>
                             <i class="fa fa-chevron-right menu-arrow"></i>
@@ -530,12 +544,12 @@
                     </div>
 
                     <div id="loggedMenu" class="logged-menu" style="display:none;">
-                        <button class="dropdown-btn signin-item" onclick="location.href='my-orders.html'">
+                        <button class="dropdown-btn signin-item" onclick="closeCustomerMenu(); location.href='my-orders.html'">
                             <div class="menu-icon orders-icon"><i class="fa fa-bag-shopping"></i></div>
                             <div class="menu-text"><span>My Orders</span><small>Track your purchases</small></div>
                             <i class="fa fa-chevron-right menu-arrow"></i>
                         </button>
-                        <button class="dropdown-btn register-item" onclick="Auth.logout()">
+                        <button class="dropdown-btn register-item" onclick="closeCustomerMenu(); Auth.logout()">
                             <div class="menu-icon logout-icon"><i class="fa fa-right-from-bracket"></i></div>
                             <div class="menu-text"><span>Logout</span><small>Securely sign out</small></div>
                             <i class="fa fa-chevron-right menu-arrow"></i>
@@ -1322,6 +1336,91 @@
                 }, 1200);
             }
         }
+
+        
+        (function () {
+
+    const search =
+        document.getElementById("productSearch");
+
+    if (!search) return;
+
+    /* =====================================
+       FORCE CLEAN STATE
+    ===================================== */
+    function clearSearch() {
+
+        // clear visible value
+        search.value = "";
+
+        // clear DOM attribute
+        search.setAttribute("value", "");
+
+        // remove weird autofill cache
+        search.defaultValue = "";
+
+    }
+
+    /* =====================================
+       INITIAL CLEAN
+    ===================================== */
+    clearSearch();
+
+    /* =====================================
+       ENABLE ONLY ON USER CLICK
+    ===================================== */
+    search.addEventListener("pointerdown", () => {
+
+        search.removeAttribute("readonly");
+
+        clearSearch();
+
+    });
+
+    /* =====================================
+       BLOCK RANDOM AUTO INSERTS
+    ===================================== */
+    let lastManualValue = "";
+
+    search.addEventListener("input", () => {
+
+        // user typing allowed
+        lastManualValue = search.value;
+
+    });
+
+    /* =====================================
+       DETECT SILENT BROWSER RESTORES
+    ===================================== */
+    setInterval(() => {
+
+        // if field not focused and random value appears
+        if (
+            document.activeElement !== search &&
+            search.value !== ""
+        ) {
+
+            clearSearch();
+        }
+
+    }, 300);
+
+    /* =====================================
+       PAGE CACHE RESTORE FIX
+    ===================================== */
+    window.addEventListener("pageshow", clearSearch);
+
+    window.addEventListener("load", clearSearch);
+
+    window.addEventListener("focus", () => {
+
+        if (document.activeElement !== search) {
+            clearSearch();
+        }
+
+    });
+
+})();
     </script>
 
     <!-- PREMIUM FOOTER -->
@@ -1353,7 +1452,11 @@
                         <li><a href="index.html"><i class="fa fa-house"></i> Home</a></li>
                         <li><a href="my-orders.html"><i class="fa fa-bag-shopping"></i> My Orders</a></li>
                         <li><a href="checkout.html"><i class="fa fa-credit-card"></i> Checkout</a></li>
-                        <li><a href="login.html"><i class="fa fa-user"></i> Login / Register</a></li>
+                        <li id="footerAuthLink">
+    <a href="login.html">
+        <i class="fa fa-user"></i> Login / Register
+    </a>
+</li>
                     </ul>
                 </div>
 

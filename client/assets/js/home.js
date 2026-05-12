@@ -202,6 +202,20 @@ document.addEventListener("click", function(e) {
     }
 });
 
+function closeCustomerMenu() {
+    document
+        .getElementById("customerDropdown")
+        ?.classList.remove("show");
+}
+
+function closeCategoryMenu() {
+
+    document
+        .getElementById("topCategoryLinks")
+        ?.classList.remove("show");
+
+}
+
 /* ================= CATEGORY FILTER ================= */
 function filterCat(id, el) {
 
@@ -218,7 +232,7 @@ function filterCat(id, el) {
 /* ================= SEARCH ================= */
 let searchScrollTimeout;
 
-document.getElementById("search")
+document.getElementById("productSearch")
 ?.addEventListener("input", function () {
 
     isSearching = this.value.trim().length > 0;
@@ -255,7 +269,7 @@ const CATEGORY_ICONS = {
 function renderGrouped() {
 
     let search =
-        document.getElementById("search")
+        document.getElementById("productSearch")
             ?.value
             ?.toLowerCase() || "";
 
@@ -1537,5 +1551,55 @@ window.addEventListener("click", function(e){
     if(e.target === authModal){
 
         Auth.close();
+    }
+});
+
+function clearSearchHistoryFix() {
+
+    const search =
+        document.getElementById("productSearch");
+
+    if (!search) return;
+
+    // clear value
+    search.value = "";
+
+    // force browser reset
+    search.setAttribute(
+        "value",
+        ""
+    );
+
+    // blur/focus trick
+    search.blur();
+
+    setTimeout(() => {
+
+        search.focus();
+
+        search.blur();
+
+    }, 10);
+}
+
+/* RUN ON LOAD */
+window.addEventListener("load", () => {
+
+    clearSearchHistoryFix();
+});
+
+/* RUN AFTER CATEGORY FILTER */
+document.addEventListener("click", (e) => {
+
+    if (
+        e.target.closest(".cat") ||
+        e.target.closest(".all-cat-item")
+    ) {
+
+        setTimeout(() => {
+
+            clearSearchHistoryFix();
+
+        }, 50);
     }
 });

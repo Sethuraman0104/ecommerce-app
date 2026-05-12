@@ -1295,48 +1295,72 @@ body {
 
 
 /* ===============================
-   PAYMENT MODAL - CLEAN DESIGN
+   PAYMENT MODAL - IMPROVED
 =============================== */
 
 #paymentModal {
     position: fixed;
     inset: 0;
     display: none;
+
+    /* BELOW TOPBAR */
+    padding-top: 90px;
+
     z-index: 9999;
+
+    justify-content: center;
+    align-items: flex-start;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    box-sizing: border-box;
 }
 
 /* OVERLAY */
 .pay-overlay {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(3px);
 }
 
-/* MODAL WRAPPER */
+/* MODAL */
 .pay-modal {
     position: relative;
+
     width: 92%;
     max-width: 950px;
-    margin: auto;
+
     background: #fff;
-    border-radius: 14px;
+    border-radius: 16px;
+
     display: flex;
     flex-direction: column;
+
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    animation: popIn 0.2s ease-in-out;
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,0.18);
+
+    animation: popIn 0.25s ease;
+
+    margin-bottom: 40px;
+
+    z-index: 2;
+
+    max-height: calc(100vh - 120px);
 }
 
 /* ANIMATION */
 @keyframes popIn {
     from {
-        transform: scale(0.95);
         opacity: 0;
+        transform: translateY(20px) scale(.97);
     }
-
     to {
-        transform: scale(1);
         opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 
@@ -1345,40 +1369,78 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+
+    padding: 18px 22px;
+
     border-bottom: 1px solid #eee;
+
+    background: #fff;
+
+    position: sticky;
+    top: 0;
+
+    z-index: 5;
 }
 
 .pay-header h3 {
     margin: 0;
     font-size: 18px;
+    font-weight: 700;
 }
 
 .pay-close {
-    background: none;
+    width: 36px;
+    height: 36px;
+
     border: none;
-    font-size: 18px;
+    border-radius: 10px;
+
+    background: #f5f5f5;
+
     cursor: pointer;
+
+    font-size: 16px;
+
+    transition: .2s;
+}
+
+.pay-close:hover {
+    background: #eee;
 }
 
 /* BODY */
 .pay-body {
     display: flex;
     gap: 20px;
-    padding: 20px;
+
+    padding: 22px;
+
+    overflow-y: auto;
 }
 
-/* LEFT PANEL */
+/* LEFT */
 .pay-left {
     flex: 1;
+    min-width: 0;
 }
 
-/* RIGHT PANEL */
+/* RIGHT */
 .pay-right {
-    width: 300px;
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 10px;
+    width: 320px;
+    min-width: 320px;
+
+    background: #fafafa;
+
+    border: 1px solid #eee;
+
+    padding: 18px;
+
+    border-radius: 14px;
+
+    height: fit-content;
+
+    position: sticky;
+    top: 10px;
 }
 
 /* SECTION */
@@ -1388,35 +1450,39 @@ body {
 
 .pay-section label {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+
     font-size: 13px;
     font-weight: 600;
     color: #333;
 }
 
-/* INPUTS (ONLY TEXT FIELDS) */
+/* INPUTS */
 .pay-modal input:not([type="radio"]):not([type="checkbox"]) {
     width: 100%;
-    height: 42px;
-    padding: 0 12px;
+    height: 44px;
+
+    padding: 0 14px;
+
     font-size: 14px;
+
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: 10px;
+
     outline: none;
+
     background: #fff;
-    transition: 0.2s ease;
+
+    transition: .2s ease;
+
     margin-bottom: 10px;
+
+    box-sizing: border-box;
 }
 
 .pay-modal input:not([type="radio"]):not([type="checkbox"]):focus {
     border-color: #111;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-}
-
-/* PLACEHOLDER */
-.pay-modal input::placeholder {
-    color: #aaa;
-    font-size: 13px;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
 }
 
 /* COUPON */
@@ -1430,13 +1496,19 @@ body {
 }
 
 .pay-coupon button {
-    height: 42px;
-    padding: 0 14px;
-    border-radius: 8px;
+    height: 44px;
+
+    padding: 0 16px;
+
     border: none;
+    border-radius: 10px;
+
     background: #111;
     color: #fff;
+
     cursor: pointer;
+
+    white-space: nowrap;
 }
 
 /* PAYMENT OPTIONS */
@@ -1446,37 +1518,40 @@ body {
     gap: 10px;
 }
 
-/* PAYMENT OPTION ROW */
 .pay-option {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 12px;
+
+    padding: 12px 14px;
+
     border: 1px solid #eee;
-    border-radius: 8px;
+    border-radius: 10px;
+
     cursor: pointer;
-    transition: 0.2s;
+
+    transition: .2s;
 }
 
 .pay-option:hover {
-    background: #f7f7f7;
+    background: #f8f8f8;
     border-color: #ddd;
 }
 
-/* RADIO BUTTON FIX */
 .pay-option input[type="radio"] {
     width: 16px;
     height: 16px;
-    accent-color: #111;
+
     margin: 0;
+
+    accent-color: #111;
 }
 
-/* CARD FORM */
+/* CARD */
 .pay-card {
     margin-top: 10px;
 }
 
-/* ROW (EXPIRY + CVV) */
 .pay-row {
     display: flex;
     gap: 10px;
@@ -1486,30 +1561,36 @@ body {
     flex: 1;
 }
 
-/* SUMMARY BOX */
+/* SUMMARY */
 .pay-summary {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
+}
+
+.pay-summary .line,
+.pay-summary .total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .pay-summary .line {
-    display: flex;
-    justify-content: space-between;
     font-size: 14px;
 }
 
 .pay-summary .discount {
     color: #d9534f;
+    font-weight: 600;
 }
 
 .pay-summary .total {
-    display: flex;
-    justify-content: space-between;
-    font-size: 16px;
-    font-weight: bold;
+    font-size: 18px;
+    font-weight: 700;
+
     border-top: 1px solid #ddd;
-    padding-top: 10px;
+
+    padding-top: 12px;
 }
 
 /* FOOTER */
@@ -1517,37 +1598,167 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    padding: 15px 20px;
+
+    padding: 16px 22px;
+
     border-top: 1px solid #eee;
+
+    background: #fff;
+
+    position: sticky;
+    bottom: 0;
+
+    z-index: 5;
 }
 
-/* BUTTONS (SAFE DEFAULTS) */
+/* BUTTONS */
+.btn-primary,
+.btn-secondary {
+    height: 44px;
+
+    padding: 0 18px;
+
+    border: none;
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    font-weight: 600;
+
+    transition: .2s;
+}
+
 .btn-primary {
     background: #111;
     color: #fff;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 8px;
-    cursor: pointer;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
 }
 
 .btn-secondary {
     background: #eee;
     color: #333;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 8px;
-    cursor: pointer;
 }
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
+/* ===============================
+   TABLET
+=============================== */
+@media (max-width: 900px) {
+
     .pay-body {
         flex-direction: column;
     }
 
     .pay-right {
         width: 100%;
+        min-width: 100%;
+
+        position: relative;
+        top: auto;
+    }
+}
+
+/* ===============================
+   MOBILE
+=============================== */
+@media (max-width: 768px) {
+
+    #paymentModal {
+        padding-top: 70px;
+    }
+
+    .pay-modal {
+        width: calc(100% - 16px);
+
+        border-radius: 14px;
+
+        max-height: calc(100vh - 80px);
+    }
+
+    .pay-body {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .pay-header,
+    .pay-footer {
+        padding: 14px 16px;
+    }
+
+    .pay-header h3 {
+        font-size: 16px;
+    }
+
+    .pay-footer {
+        flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+    }
+
+    .pay-coupon {
+        flex-direction: column;
+    }
+
+    .pay-coupon button {
+        width: 100%;
+    }
+
+    .pay-row {
+        flex-direction: column;
+    }
+}
+
+/* ===============================
+   SMALL MOBILE
+=============================== */
+@media (max-width: 480px) {
+
+    #paymentModal {
+        padding-top: 60px;
+    }
+
+    .pay-modal {
+        width: calc(100% - 10px);
+        border-radius: 12px;
+    }
+
+    .pay-body {
+        padding: 12px;
+    }
+
+    .pay-right {
+        padding: 14px;
+    }
+}
+
+/* CARD FORM */
+.pay-card {
+    margin-top: 14px;
+
+    padding: 14px;
+
+    border: 1px solid #eee;
+    border-radius: 12px;
+
+    background: #fafafa;
+
+    animation: fadeCard .25s ease;
+}
+
+/* CARD ANIMATION */
+@keyframes fadeCard {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
