@@ -214,6 +214,8 @@ READY_RESOLVE: null,
     // FOOTER
     // ==========================
     renderFooter(companyName, logo, copyright, developedBy) {
+        const elappname = document.getElementById('eshappname');
+        if (elappname) elappname.innerText = copyright;
 
         const footer = document.getElementById("appFooter");
         if (!footer) return;
