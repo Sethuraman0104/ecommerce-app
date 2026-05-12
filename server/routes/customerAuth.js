@@ -135,7 +135,9 @@ router.get('/google/callback',
             { expiresIn: "1h" }
         );
 
-        res.redirect(`http://localhost:3000/index.html?token=${token}`);
+        res.redirect(
+    `${process.env.CLIENT_URL}/index.html?token=${token}`
+);
     }
 );
 
