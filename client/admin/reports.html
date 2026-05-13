@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Reports Center</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="layout">
+
+     <!-- SIDEBAR -->
+    <div class="sidebar">
+    <!-- TOP (BRAND) -->
+    <div class="sidebar-top">
+
+        <div class="brand-card">
+            <div class="brand-glow"></div>
+
+            <div class="brand-content">
+                <div class="brand-logo">
+                    <img id="companyLogo" src="../assets/logo.png">
+                </div>
+
+                <div class="brand-info">
+                    <h2 id="companyName">E-Shop</h2>
+                    <small>Admin Control Center</small>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MIDDLE (MENU) -->
+    <div class="sidebar-menu">
+
+        <a href="/admin/dashboard.html"><i class="fa fa-home"></i> Dashboard</a>
+        <a href="/admin/products.html"><i class="fa fa-box"></i> Products</a>
+        <a href="/admin/orders.html"><i class="fa fa-file-invoice"></i> Orders</a>
+        <a href="/admin/customers.html"><i class="fa fa-users"></i> Customers</a>
+        <a href="/admin/payments.html"><i class="fa fa-credit-card"></i> Payments</a>
+        <a href="/admin/coupons.html"><i class="fa fa-tag"></i> Coupons</a>
+        <a href="/admin/reports.html" class="active"><i class="fa fa-chart-bar"></i> Reports</a>
+        <a href="/admin/settings.html"><i class="fa fa-cog"></i> Settings</a>
+        <a href="/admin/company.html"><i class="fa fa-building"></i> Company</a>
+
+    </div>
+
+    <!-- BOTTOM (FIXED AREA) -->
+    <div class="sidebar-bottom">
+
+        <!-- LOGOUT -->
+        <div class="esh-logout" onclick="App.logout()">
+            <div class="esh-logout-icon">
+                <i class="fa fa-right-from-bracket"></i>
+            </div>
+
+            <div class="esh-logout-text">
+                <div class="title">Logout</div>
+                <div class="sub">Sign out from system</div>
+            </div>
+
+            <div class="esh-logout-arrow">
+                <i class="fa fa-chevron-right"></i>
+            </div>
+        </div>
+
+        <!-- VERSION -->
+        <div class="esh-sidebar-footer">
+
+            <div class="esh-divider"></div>
+
+            <div class="esh-app-info">
+                <div class="esh-app-name" id="eshappname">E-Shop Admin</div>
+                <div class="esh-app-version">Version 1.0.0</div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+  <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">    
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <i class="fa fa-bars"></i>
+</button>  
+      <div class="page-title">
+        <i class="fa fa-file-pdf"></i>
+        <h1>Reports Center</h1>
+      </div>
+
+      <div class="top-right">
+        <!-- USER CARD -->
+        <div class="user-card" onclick="App.goToProfile()">
+
+          <img id="userPhoto" src="../assets/user.png" class="user-avatar">
+
+          <div class="user-info">
+            <div class="user-name" id="userName">Admin</div>
+            <div class="user-role" id="userRole">Admin</div>
+            <div class="user-login" id="lastLogin">Last login: -</div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+        <div class="content" style="margin-bottom: 10px;">
+
+            <!-- HEADER -->
+            <div class="report-header-bar">
+                <div>
+                    <h1>Reports Center</h1>
+                    <p>Fast access to all business analytics</p>
+                </div>
+
+                <div class="report-search">
+                    <input type="text"
+                           id="reportSearch"
+                           placeholder="Search reports..."
+                           onkeyup="filterReports()">
+                </div>
+            </div>
+
+            <!-- GRID -->
+            <div class="report-grid" id="reportListBody"></div>
+
+        </div>
+
+        <!-- FOOTER (EMPTY - WILL BE RENDERED BY JS) -->
+    <div class="footer" id="appFooter"></div>
+
+    </div>
+</div>
+
+<div id="reportModal" class="report-modal">
+
+    <div class="report-modal-content">
+
+        <!-- HEADER -->
+        <div class="report-modal-header">
+
+            <!-- TOP ROW -->
+            <div class="modal-top-row">
+
+                <div class="modal-title-section">
+                    <h2 id="modalTitle">Report</h2>
+                    <span class="modal-subtitle">Analytics Viewer</span>
+                </div>
+
+                <div class="modal-actions">
+
+                    <button class="action-btn excel" onclick="downloadExcel()">
+                        <i class="fa fa-file-excel"></i>
+                    </button>
+
+                    <button class="action-btn pdf" onclick="downloadPDF()">
+                        <i class="fa fa-file-pdf"></i>
+                    </button>
+
+                    <button class="action-btn close" onclick="closeModal()">
+                        <i class="fa fa-xmark"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- SEARCH ROW -->
+            <div class="modal-search-row">
+                <input type="text"
+                       id="modalSearch"
+                       placeholder="Search in report..."
+                       onkeyup="filterModalData()">
+            </div>
+
+        </div>
+
+        <!-- BODY -->
+        <div class="report-modal-body">
+
+            <div id="modalLoader" class="modal-loader hidden">
+                <div class="spinner"></div>
+                <p>Loading report data...</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="report-table">
+                    <thead id="reportHead"></thead>
+                    <tbody id="reportBody"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- COMMON APP -->
+<script src="../config/config.js"></script>
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/reports-page.js"></script>
+
+<script>
+    App.init();
+</script>
+
+<script>
+
+function toggleSidebar() {
+
+    document.querySelector(".sidebar")
+        .classList.toggle("active");
+
+    document.querySelector(".sidebar-overlay")
+        .classList.toggle("active");
+}
+
+function closeSidebar() {
+
+    document.querySelector(".sidebar")
+        .classList.remove("active");
+
+    document.querySelector(".sidebar-overlay")
+        .classList.remove("active");
+}
+
+/* AUTO CLOSE MOBILE MENU */
+document.querySelectorAll(".sidebar a")
+    .forEach(link => {
+
+        link.addEventListener("click", () => {
+
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        });
+    });
+
+/* AUTO RESET DESKTOP */
+window.addEventListener("resize", () => {
+
+    if (window.innerWidth > 768) {
+        closeSidebar();
+    }
+});
+
+</script>
+
+<!-- OPTIONAL PAGE-SPECIFIC -->
+<script>
+function goToProfile() {
+    window.location.href = "profile.html";
+}
+</script>
+
+
+</body>
+</html>

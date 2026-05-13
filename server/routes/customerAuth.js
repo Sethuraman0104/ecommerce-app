@@ -1,35 +1,84 @@
 const express = require('express');
 const router = express.Router();
+
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
-const { poolPromise } = require('../config/db');
-const sql = require('mssql'); // ✅ ADD THIS at top (IMPORTANT)
 
-/* ================= REGISTER ================= */
+const { poolPromise } = require('../config/db');
+const sql = require('mssql');
+
+/* =================================================
+   REGISTER
+================================================= */
 router.post('/register', async (req, res) => {
+
     try {
+
         const { name, email, password } = req.body;
+
         const pool = await poolPromise;
 
+        // CHECK EXISTING EMAIL
+        const existing = await pool.request()
+            .input("Email", email)
+            .query(`
+                SELECT CustomerID
+                FROM Customers
+                WHERE Email=@Email
+            `);
+
+        if (existing.recordset.length) {
+
+            return res.status(400).json({
+                message: "Email already registered"
+            });
+        }
+
+        // HASH PASSWORD
         const hash = await bcrypt.hash(password, 10);
 
+        // INSERT CUSTOMER
         await pool.request()
             .input("FullName", name)
             .input("Email", email)
             .input("PasswordHash", hash)
             .query(`
-                INSERT INTO Customers (FullName, Email, PasswordHash, CreatedAt)
-                VALUES (@FullName, @Email, @PasswordHash, GETDATE())
+                INSERT INTO Customers
+                (
+                    FullName,
+                    Email,
+                    PasswordHash,
+                    CreatedAt
+                )
+                VALUES
+                (
+                    @FullName,
+                    @Email,
+                    @PasswordHash,
+                    GETDATE()
+                )
             `);
 
-        res.json({ message: "Customer registered" });
+        res.json({
+            success: true,
+            message: "Customer registered successfully"
+        });
 
     } catch (err) {
-        res.status(500).json({ message: err.message });
+
+        console.error("REGISTER ERROR:", err);
+
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 });
 
+/* =================================================
+   FORGOT PASSWORD
+================================================= */
 router.post('/forgot-password', async (req, res) => {
 
     try {
@@ -46,56 +95,90 @@ router.post('/forgot-password', async (req, res) => {
                 WHERE Email=@Email
             `);
 
+        // SECURITY:
+        // DON'T REVEAL WHETHER ACCOUNT EXISTS
         if (!result.recordset.length) {
 
             return res.json({
-                message:
-                    "If account exists, reset email sent"
+                success: true,
+                message: "If account exists, reset email sent"
             });
         }
 
         // TODO:
-        // generate reset token
-        // send email
+        // Generate reset token
+        // Send email
 
         return res.json({
-            message:
-                "Password reset email sent"
+            success: true,
+            message: "Password reset email sent"
         });
 
-    } catch {
+    } catch (err) {
+
+        console.error("FORGOT PASSWORD ERROR:", err);
 
         res.status(500).json({
-            message:
-                "Unable to process request"
+            success: false,
+            message: "Unable to process request"
         });
     }
 });
 
-/* ================= LOGIN ================= */
+/* =================================================
+   LOGIN
+================================================= */
 router.post('/login', async (req, res) => {
+
     try {
 
         const { email, password } = req.body;
+
         const pool = await poolPromise;
 
         const result = await pool.request()
             .input("Email", email)
-            .query(`SELECT * FROM Customers WHERE Email=@Email`);
+            .query(`
+                SELECT *
+                FROM Customers
+                WHERE Email=@Email
+            `);
 
-        if (!result.recordset.length)
-            return res.status(401).json({ message: "Invalid login" });
+        // USER NOT FOUND
+        if (!result.recordset.length) {
+
+            return res.status(401).json({
+                success: false,
+                message: "Invalid login"
+            });
+        }
 
         const customer = result.recordset[0];
 
-        if (!customer.PasswordHash)
-            return res.status(400).json({ message: "Use Google login" });
+        // GOOGLE ACCOUNT ONLY
+        if (!customer.PasswordHash) {
 
-        const ok = await bcrypt.compare(password, customer.PasswordHash);
+            return res.status(400).json({
+                success: false,
+                message: "Use Google login"
+            });
+        }
 
-        if (!ok)
-            return res.status(401).json({ message: "Invalid login" });
+        // CHECK PASSWORD
+        const ok = await bcrypt.compare(
+            password,
+            customer.PasswordHash
+        );
 
+        if (!ok) {
+
+            return res.status(401).json({
+                success: false,
+                message: "Invalid login"
+            });
+        }
+
+        // CREATE JWT
         const token = jwt.sign(
             {
                 customerId: customer.CustomerID,
@@ -103,59 +186,113 @@ router.post('/login', async (req, res) => {
                 name: customer.FullName
             },
             process.env.JWT_SECRET,
-            { expiresIn: "1h" }
+            {
+                expiresIn: "1h"
+            }
         );
 
-        res.json({ token, customer });
+        res.json({
+            success: true,
+            token,
+            customer
+        });
 
     } catch (err) {
-        res.status(500).json({ message: err.message });
+
+        console.error("LOGIN ERROR:", err);
+
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 });
 
-/* ================= GOOGLE LOGIN ================= */
-router.get('/google',
+/* =================================================
+   GOOGLE LOGIN
+================================================= */
+router.get(
+    '/google',
+
     passport.authenticate('google', {
-        scope: ['profile', 'email']
+        scope: ['profile', 'email'],
+        session: false
     })
 );
 
-/* ================= GOOGLE CALLBACK ================= */
-router.get('/google/callback',
-    passport.authenticate('google', { failureRedirect: '/' }),
-    (req, res) => {
+/* =================================================
+   GOOGLE CALLBACK
+================================================= */
+router.get(
+    '/google/callback',
 
-        const token = jwt.sign(
-            {
-                customerId: req.user.CustomerID,
-                email: req.user.Email,
-                name: req.user.FullName
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: "1h" }
-        );
+    passport.authenticate('google', {
+        failureRedirect: '/',
+        session: false
+    }),
 
-        res.redirect(
-    `${process.env.CLIENT_URL}/index.html?token=${token}`
-);
+    async (req, res) => {
+
+        try {
+
+            // CREATE JWT
+            const token = jwt.sign(
+                {
+                    customerId: req.user.CustomerID,
+                    email: req.user.Email,
+                    name: req.user.FullName
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: "1h"
+                }
+            );
+
+            // REDIRECT TO FRONTEND
+            res.redirect(
+                `${process.env.CLIENT_URL}/index.html?token=${token}`
+            );
+
+        } catch (err) {
+
+            console.error("GOOGLE CALLBACK ERROR:", err);
+
+            res.redirect(
+                `${process.env.CLIENT_URL}/index.html?googleLogin=failed`
+            );
+        }
     }
 );
 
+/* =================================================
+   GET CURRENT CUSTOMER
+================================================= */
 router.get('/me', async (req, res) => {
+
     try {
 
         const auth = req.headers.authorization;
-        if (!auth) return res.status(401).json({ message: "No token" });
+
+        if (!auth) {
+
+            return res.status(401).json({
+                message: "No token"
+            });
+        }
 
         const token = auth.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
 
         const pool = await poolPromise;
 
         const result = await pool.request()
             .input("CustomerID", decoded.customerId)
             .query(`
-                SELECT 
+                SELECT
                     CustomerID,
                     FullName,
                     Email,
@@ -170,25 +307,46 @@ router.get('/me', async (req, res) => {
                 WHERE CustomerID=@CustomerID
             `);
 
-        return res.json(result.recordset[0]);
+        res.json(result.recordset[0]);
 
     } catch (err) {
-        return res.status(401).json({ message: "Invalid token" });
+
+        console.error("ME ERROR:", err);
+
+        res.status(401).json({
+            message: "Invalid token"
+        });
     }
 });
 
+/* =================================================
+   UPDATE CUSTOMER
+================================================= */
 router.put('/update', async (req, res) => {
+
     try {
 
         const auth = req.headers.authorization;
-        if (!auth) return res.status(401).json({ success: false, message: "No token" });
+
+        if (!auth) {
+
+            return res.status(401).json({
+                success: false,
+                message: "No token"
+            });
+        }
 
         const token = auth.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
 
         const customerId = Number(decoded.customerId);
 
         if (!customerId) {
+
             return res.status(400).json({
                 success: false,
                 message: "Invalid CustomerID in token"
@@ -222,7 +380,7 @@ router.put('/update', async (req, res) => {
             .input("PostalCode", sql.NVarChar, PostalCode || "")
             .query(`
                 UPDATE Customers
-                SET 
+                SET
                     FullName=@FullName,
                     Email=@Email,
                     Phone=@Phone,
@@ -235,10 +393,14 @@ router.put('/update', async (req, res) => {
                 WHERE CustomerID=@CustomerID
             `);
 
-        res.json({ success: true });
+        res.json({
+            success: true
+        });
 
     } catch (err) {
+
         console.error("UPDATE ERROR:", err);
+
         res.status(500).json({
             success: false,
             message: "Update failed",
@@ -247,7 +409,10 @@ router.put('/update', async (req, res) => {
     }
 });
 
-router.get("/coupons/validate", async (req, res) => {
+/* =================================================
+   VALIDATE COUPON
+================================================= */
+router.get('/coupons/validate', async (req, res) => {
 
     try {
 
@@ -266,7 +431,10 @@ router.get("/coupons/validate", async (req, res) => {
             `);
 
         if (!result.recordset.length) {
-            return res.json({ valid: false });
+
+            return res.json({
+                valid: false
+            });
         }
 
         res.json({
@@ -275,7 +443,12 @@ router.get("/coupons/validate", async (req, res) => {
         });
 
     } catch (err) {
-        res.status(500).json({ valid: false });
+
+        console.error("COUPON VALIDATION ERROR:", err);
+
+        res.status(500).json({
+            valid: false
+        });
     }
 });
 

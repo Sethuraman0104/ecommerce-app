@@ -80,6 +80,7 @@ app.use('/api/payments', require('./routes/payments'));
 app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/profile', require('./routes/profile'));
+app.use('/api/reports', require('./routes/reports'));
 
 /* =========================
    HEALTH CHECK
