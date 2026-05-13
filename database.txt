@@ -440,3 +440,27 @@ ADD
     OfferValue decimal(18,2) NULL,   -- 10 or 5.000
     OfferStart datetime NULL,
     OfferEnd datetime NULL;
+
+************* 13/05/2026 - In Office ***********************
+Drop table AuditLogs
+CREATE TABLE AuditLogs (
+    LogID INT IDENTITY(1,1) PRIMARY KEY,
+
+    UserID INT NULL,
+    UserName NVARCHAR(200) NULL,
+
+    Module NVARCHAR(100) NOT NULL,
+    ActionType NVARCHAR(100) NOT NULL,
+
+    Description NVARCHAR(MAX) NULL,
+
+    OldValues NVARCHAR(MAX) NULL,
+    NewValues NVARCHAR(MAX) NULL,
+
+    IPAddress NVARCHAR(100) NULL,
+    UserAgent NVARCHAR(MAX) NULL,
+
+    Status NVARCHAR(50) NULL,
+
+    CreatedAt DATETIME DEFAULT GETDATE()
+);

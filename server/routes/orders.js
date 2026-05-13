@@ -3,11 +3,32 @@ const router = express.Router();
 const { poolPromise } = require("../config/db");
 const sql = require("mssql");
 const jwt = require("jsonwebtoken");
+const logAudit = require("../utils/auditLogger");
+
+/* =========================
+   TOKEN HELPER
+========================= */
+function getUserFromToken(req) {
+    try {
+        const auth = req.headers.authorization;
+        if (!auth) return null;
+
+        const token = auth.split(" ")[1];
+        if (!token) return null;
+
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+        return null;
+    }
+}
 
 // =========================
 // GET ORDERS (LIST)
 // =========================
 router.get("/", async (req, res) => {
+
+    const currentUser = getUserFromToken(req);
+
     try {
         const pool = await poolPromise;
 
@@ -40,10 +61,50 @@ router.get("/", async (req, res) => {
             ORDER BY o.OrderID DESC
         `);
 
+        // =========================
+        // AUDIT SUCCESS
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_LIST_VIEW",
+
+            description: "Viewed orders list",
+
+            status: "SUCCESS"
+        });
+
         res.json(result.recordset);
 
     } catch (err) {
-        console.error(err);
+
+        console.error("GET ORDERS ERROR:", err);
+
+        // =========================
+        // AUDIT FAILED
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_LIST_FAILED",
+
+            description: "Failed to load orders list",
+
+            status: "FAILED",
+
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
@@ -53,6 +114,9 @@ router.get("/", async (req, res) => {
 // ORDER DETAILS
 // =========================
 router.get("/:id/details", async (req, res) => {
+
+    const currentUser = getUserFromToken(req);
+
     try {
         const pool = await poolPromise;
         const orderId = req.params.id;
@@ -121,6 +185,23 @@ router.get("/:id/details", async (req, res) => {
                 WHERE OrderID = @OrderID
             `);
 
+        // =========================
+        // AUDIT SUCCESS
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_DETAILS_VIEW",
+
+            description: `Viewed order details (OrderID=${orderId})`,
+
+            status: "SUCCESS"
+        });
+
         res.json({
             order: orderResult.recordset[0] || null,
             items: itemsResult.recordset,
@@ -128,15 +209,40 @@ router.get("/:id/details", async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+
+        console.error("ORDER DETAILS ERROR:", err);
+
+        // =========================
+        // AUDIT FAILED
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_DETAILS_FAILED",
+
+            description: `Failed to load order details (OrderID=${req.params.id})`,
+
+            status: "FAILED",
+
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
-
-// =========================
+ // =========================
 // UPDATE STATUS + ADMIN REMARKS (HISTORY)
 // =========================
 router.put("/:id/status", async (req, res) => {
+
+    const currentUser = getUserFromToken(req);
+
     try {
 
         const allowed = [
@@ -150,12 +256,35 @@ router.put("/:id/status", async (req, res) => {
         const { status, adminRemarks } = req.body;
 
         if (!allowed.includes(status)) {
+
+            // AUDIT FAILED (INVALID STATUS)
+            await logAudit({
+                req,
+
+                userId: currentUser?.userId || null,
+                userName: currentUser?.email || "Unknown",
+
+                module: "Orders",
+                actionType: "ORDER_STATUS_INVALID",
+
+                description: `Invalid status update attempted: ${status}`,
+
+                status: "FAILED",
+
+                newValues: {
+                    orderId: req.params.id,
+                    status
+                }
+            });
+
             return res.status(400).json({ message: "Invalid status" });
         }
 
         const pool = await poolPromise;
 
+        // =========================
         // 1. update status
+        // =========================
         await pool.request()
             .input("OrderID", sql.Int, req.params.id)
             .input("Status", sql.NVarChar, status)
@@ -165,8 +294,11 @@ router.put("/:id/status", async (req, res) => {
                 WHERE OrderID = @OrderID
             `);
 
-        // 2. update latest admin remark in Orders table
+        // =========================
+        // 2. update admin remarks
+        // =========================
         if (adminRemarks) {
+
             await pool.request()
                 .input("OrderID", sql.Int, req.params.id)
                 .input("AdminRemarks", sql.NVarChar, adminRemarks)
@@ -176,12 +308,14 @@ router.put("/:id/status", async (req, res) => {
                     WHERE OrderID = @OrderID
                 `);
 
+            // =========================
             // 3. insert history
+            // =========================
             await pool.request()
                 .input("OrderID", sql.Int, req.params.id)
                 .input("Status", sql.NVarChar, status)
                 .input("Remarks", sql.NVarChar, adminRemarks)
-                .input("CreatedBy", sql.NVarChar, "Admin")
+                .input("CreatedBy", sql.NVarChar, currentUser?.email || "Admin")
                 .query(`
                     INSERT INTO OrderRemarksHistory
                     (OrderID, Status, Remarks, CreatedBy, CreatedAt)
@@ -190,19 +324,67 @@ router.put("/:id/status", async (req, res) => {
                 `);
         }
 
+        // =========================
+        // AUDIT SUCCESS
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_STATUS_UPDATED",
+
+            description: `Order status updated to ${status} (OrderID=${req.params.id})`,
+
+            status: "SUCCESS",
+
+            newValues: {
+                orderId: req.params.id,
+                status,
+                adminRemarks
+            }
+        });
+
         res.json({ message: "Order updated successfully" });
 
     } catch (err) {
-        console.error(err);
+
+        console.error("ORDER STATUS UPDATE ERROR:", err);
+
+        // =========================
+        // AUDIT FAILED
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_STATUS_UPDATE_FAILED",
+
+            description: `Order status update failed (OrderID=${req.params.id})`,
+
+            status: "FAILED",
+
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
-
 
 // =========================
 // REMARKS HISTORY
 // =========================
 router.get("/:id/remarks", async (req, res) => {
+
+    const currentUser = getUserFromToken(req);
+
     try {
         const pool = await poolPromise;
 
@@ -215,18 +397,61 @@ router.get("/:id/remarks", async (req, res) => {
                 ORDER BY CreatedAt DESC
             `);
 
+        // =========================
+        // AUDIT SUCCESS
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_REMARKS_VIEW",
+
+            description: `Viewed order remarks history (OrderID=${req.params.id})`,
+
+            status: "SUCCESS"
+        });
+
         res.json(result.recordset);
 
     } catch (err) {
+
+        console.error("ORDER REMARKS ERROR:", err);
+
+        // =========================
+        // AUDIT FAILED
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_REMARKS_FAILED",
+
+            description: `Failed to load order remarks history (OrderID=${req.params.id})`,
+
+            status: "FAILED",
+
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
-
 
 // =========================
 // DELETE ORDER
 // =========================
 router.delete("/:id", async (req, res) => {
+
+    const currentUser = getUserFromToken(req);
+
     try {
         const pool = await poolPromise;
         const orderId = req.params.id;
@@ -242,16 +467,61 @@ router.delete("/:id", async (req, res) => {
 
         const order = check.recordset[0];
 
+        // =========================
+        // NOT FOUND
+        // =========================
         if (!order) {
+
+            await logAudit({
+                req,
+
+                userId: currentUser?.userId || null,
+                userName: currentUser?.email || "Unknown",
+
+                module: "Orders",
+                actionType: "ORDER_DELETE_NOT_FOUND",
+
+                description: `Delete failed - order not found (OrderID=${orderId})`,
+
+                status: "FAILED"
+            });
+
             return res.status(404).json({ message: "Order not found" });
         }
 
+        // =========================
+        // DELETE RULE BLOCK
+        // =========================
         if (!(order.Status === "Cancelled" && (order.PaymentStatus || "").toLowerCase() === "failed")) {
+
+            await logAudit({
+                req,
+
+                userId: currentUser?.userId || null,
+                userName: currentUser?.email || "Unknown",
+
+                module: "Orders",
+                actionType: "ORDER_DELETE_BLOCKED",
+
+                description: `Delete blocked for OrderID=${orderId} (Status=${order.Status}, Payment=${order.PaymentStatus})`,
+
+                status: "FAILED",
+
+                newValues: {
+                    orderId,
+                    status: order.Status,
+                    paymentStatus: order.PaymentStatus
+                }
+            });
+
             return res.status(400).json({
                 message: "Only cancelled + failed orders can be deleted"
             });
         }
 
+        // =========================
+        // DELETE CHILD RECORDS
+        // =========================
         await pool.request().input("OrderID", sql.Int, orderId)
             .query(`DELETE FROM OrderItems WHERE OrderID = @OrderID`);
 
@@ -261,21 +531,75 @@ router.delete("/:id", async (req, res) => {
         await pool.request().input("OrderID", sql.Int, orderId)
             .query(`DELETE FROM Orders WHERE OrderID = @OrderID`);
 
+        // =========================
+        // AUDIT SUCCESS
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_DELETED",
+
+            description: `Order deleted successfully (OrderID=${orderId})`,
+
+            status: "SUCCESS",
+
+            oldValues: {
+                orderId
+            }
+        });
+
         res.json({ message: "Order deleted successfully" });
 
     } catch (err) {
-        console.error(err);
+
+        console.error("ORDER DELETE ERROR:", err);
+
+        // =========================
+        // AUDIT FAILED
+        // =========================
+        await logAudit({
+            req,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.email || "Unknown",
+
+            module: "Orders",
+            actionType: "ORDER_DELETE_FAILED",
+
+            description: `Order deletion failed (OrderID=${req.params.id})`,
+
+            status: "FAILED",
+
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
-
 router.post("/full-create", async (req, res) => {
+
+    let orderId = null; // IMPORTANT for audit tracking
 
     try {
 
         const auth = req.headers.authorization;
 
         if (!auth) {
+
+            await logAudit({
+                req,
+                module: "Order",
+                actionType: "ORDER_CREATE_UNAUTHORIZED",
+                description: "Order creation blocked - no auth token",
+                status: "FAILED"
+            });
+
             return res.status(401).json({
                 success: false
             });
@@ -304,52 +628,30 @@ router.post("/full-create", async (req, res) => {
         } = req.body;
 
         const pool = await poolPromise;
-
         const transaction = new sql.Transaction(pool);
 
         await transaction.begin();
 
         try {
 
-            // ===============================
-            // PAYMENT TYPE CHECK
-            // ===============================
             const isCOD =
                 PaymentMethod === "COD" ||
                 PaymentMethod === "Cash";
 
-            // ===============================
-            // ORDER STATUS
-            // ===============================
-            const orderStatus = isCOD
-                ? "Pending"
-                : "Processing";
+            const orderStatus =
+                isCOD ? "Pending" : "Processing";
 
-            // ===============================
-            // PAYMENT STATUS
-            // ===============================
-            const finalPaymentStatus = isCOD
-                ? "Pending"
-                : (PaymentStatus || "Success");
+            const finalPaymentStatus =
+                isCOD ? "Pending" : (PaymentStatus || "Success");
 
-            // ===============================
-            // TRANSACTION ID
-            // ===============================
-            const transactionId = isCOD
-                ? null
-                : "TXN" + Date.now();
+            const transactionId =
+                isCOD ? null : "TXN" + Date.now();
 
-            // ===============================
-            // VAT / EXTRA
-            // ===============================
             const vatPercent = VAT?.percent || 0;
             const vatAmount = VAT?.amount || 0;
 
-            const addPercent =
-                AdditionalCharges?.percent || 0;
-
-            const addAmount =
-                AdditionalCharges?.amount || 0;
+            const addPercent = AdditionalCharges?.percent || 0;
+            const addAmount = AdditionalCharges?.amount || 0;
 
             // ===============================
             // CREATE ORDER
@@ -357,71 +659,17 @@ router.post("/full-create", async (req, res) => {
             const orderResult =
                 await new sql.Request(transaction)
 
-                    .input(
-                        "CustomerID",
-                        sql.Int,
-                        customerId
-                    )
-
-                    .input(
-                        "TotalAmount",
-                        sql.Decimal(18, 2),
-                        GrandTotal
-                    )
-
-                    .input(
-                        "Status",
-                        sql.NVarChar,
-                        orderStatus
-                    )
-
-                    .input(
-                        "CouponID",
-                        sql.Int,
-                        CouponID
-                    )
-
-                    .input(
-                        "DiscountAmount",
-                        sql.Decimal(18, 2),
-                        DiscountAmount || 0
-                    )
-
-                    .input(
-                        "DiscountPercent",
-                        sql.Decimal(5, 2),
-                        DiscountPercent || 0
-                    )
-
-                    .input(
-                        "VATPercent",
-                        sql.Decimal(5, 2),
-                        vatPercent
-                    )
-
-                    .input(
-                        "VATAmount",
-                        sql.Decimal(18, 2),
-                        vatAmount
-                    )
-
-                    .input(
-                        "AdditionalPercent",
-                        sql.Decimal(5, 2),
-                        addPercent
-                    )
-
-                    .input(
-                        "AdditionalAmount",
-                        sql.Decimal(18, 2),
-                        addAmount
-                    )
-
-                    .input(
-                        "SubTotal",
-                        sql.Decimal(18, 2),
-                        SubTotal
-                    )
+                    .input("CustomerID", sql.Int, customerId)
+                    .input("TotalAmount", sql.Decimal(18, 2), GrandTotal)
+                    .input("Status", sql.NVarChar, orderStatus)
+                    .input("CouponID", sql.Int, CouponID)
+                    .input("DiscountAmount", sql.Decimal(18, 2), DiscountAmount || 0)
+                    .input("DiscountPercent", sql.Decimal(5, 2), DiscountPercent || 0)
+                    .input("VATPercent", sql.Decimal(5, 2), vatPercent)
+                    .input("VATAmount", sql.Decimal(18, 2), vatAmount)
+                    .input("AdditionalPercent", sql.Decimal(5, 2), addPercent)
+                    .input("AdditionalAmount", sql.Decimal(18, 2), addAmount)
+                    .input("SubTotal", sql.Decimal(18, 2), SubTotal)
 
                     .query(`
                         INSERT INTO Orders
@@ -465,39 +713,19 @@ router.post("/full-create", async (req, res) => {
                         )
                     `);
 
-            const orderId =
-                orderResult.recordset[0].OrderID;
+            orderId = orderResult.recordset[0].OrderID;
 
             // ===============================
-            // INSERT ORDER ITEMS
+            // INSERT ITEMS
             // ===============================
             for (let item of Items) {
 
                 await new sql.Request(transaction)
 
-                    .input(
-                        "OrderID",
-                        sql.Int,
-                        orderId
-                    )
-
-                    .input(
-                        "ProductID",
-                        sql.Int,
-                        item.ProductID
-                    )
-
-                    .input(
-                        "Quantity",
-                        sql.Int,
-                        item.Qty
-                    )
-
-                    .input(
-                        "Price",
-                        sql.Decimal(18, 2),
-                        item.Price
-                    )
+                    .input("OrderID", sql.Int, orderId)
+                    .input("ProductID", sql.Int, item.ProductID)
+                    .input("Quantity", sql.Int, item.Qty)
+                    .input("Price", sql.Decimal(18, 2), item.Price)
 
                     .query(`
                         INSERT INTO OrderItems
@@ -518,33 +746,14 @@ router.post("/full-create", async (req, res) => {
             }
 
             // ===============================
-            // INSERT PAYMENT
+            // PAYMENT
             // ===============================
             await new sql.Request(transaction)
 
-                .input(
-                    "OrderID",
-                    sql.Int,
-                    orderId
-                )
-
-                .input(
-                    "PaymentMethod",
-                    sql.NVarChar,
-                    PaymentMethod
-                )
-
-                .input(
-                    "PaymentStatus",
-                    sql.NVarChar,
-                    finalPaymentStatus
-                )
-
-                .input(
-                    "TransactionID",
-                    sql.NVarChar,
-                    transactionId
-                )
+                .input("OrderID", sql.Int, orderId)
+                .input("PaymentMethod", sql.NVarChar, PaymentMethod)
+                .input("PaymentStatus", sql.NVarChar, finalPaymentStatus)
+                .input("TransactionID", sql.NVarChar, transactionId)
 
                 .query(`
                     INSERT INTO Payments
@@ -570,6 +779,25 @@ router.post("/full-create", async (req, res) => {
             // ===============================
             await transaction.commit();
 
+            // ✅ SUCCESS AUDIT (AFTER COMMIT)
+            await logAudit({
+                req,
+                userId: customerId,
+                userName: decoded.email || "Customer",
+                module: "Order",
+                actionType: "ORDER_CREATED",
+                description: `Order created successfully (OrderID=${orderId})`,
+                status: "SUCCESS",
+                newValues: {
+                    orderId,
+                    customerId,
+                    grandTotal: GrandTotal,
+                    paymentMethod: PaymentMethod,
+                    orderStatus,
+                    paymentStatus: finalPaymentStatus
+                }
+            });
+
             res.json({
                 success: true,
                 orderId,
@@ -582,6 +810,20 @@ router.post("/full-create", async (req, res) => {
 
             await transaction.rollback();
 
+            // ❌ FAILURE AUDIT (INSIDE TRANSACTION)
+            await logAudit({
+                req,
+                userId: customerId,
+                userName: decoded?.email || "Customer",
+                module: "Order",
+                actionType: "ORDER_CREATE_FAILED",
+                description: "Order creation failed during transaction",
+                status: "FAILED",
+                newValues: {
+                    error: err.message
+                }
+            });
+
             throw err;
         }
 
@@ -589,14 +831,25 @@ router.post("/full-create", async (req, res) => {
 
         console.error(err);
 
+        // ❌ OUTER FAILURE AUDIT
+        await logAudit({
+            req,
+            module: "Order",
+            actionType: "ORDER_CREATE_ERROR",
+            description: "Order creation failed (outer catch)",
+            status: "FAILED",
+            newValues: {
+                error: err.message,
+                orderId
+            }
+        });
+
         res.status(500).json({
             success: false,
             message: err.message
         });
     }
 });
-
-
 
 // ======================================================
 // MY ORDERS
@@ -608,6 +861,15 @@ router.get("/my-orders", async (req, res) => {
         const auth = req.headers.authorization;
 
         if (!auth) {
+
+            await logAudit({
+                req,
+                module: "Order",
+                actionType: "MY_ORDERS_UNAUTHORIZED",
+                description: "My orders access blocked - missing token",
+                status: "FAILED"
+            });
+
             return res.status(401).json([]);
         }
 
@@ -623,6 +885,14 @@ router.get("/my-orders", async (req, res) => {
             );
 
         } catch (err) {
+
+            await logAudit({
+                req,
+                module: "Order",
+                actionType: "MY_ORDERS_TOKEN_EXPIRED",
+                description: "My orders access failed - token expired",
+                status: "FAILED"
+            });
 
             return res.status(401).json({
                 success: false,
@@ -669,13 +939,41 @@ router.get("/my-orders", async (req, res) => {
 
             `);
 
+        // ✅ SUCCESS AUDIT
+        await logAudit({
+            req,
+            userId: decoded.customerId,
+            userName: decoded.email || "Customer",
+            module: "Order",
+            actionType: "MY_ORDERS_VIEW",
+            description: "Customer viewed their orders list",
+            status: "SUCCESS",
+            newValues: {
+                customerId: decoded.customerId,
+                totalOrdersFetched: result.recordset.length
+            }
+        });
+
         res.json(result.recordset);
 
     } catch (err) {
 
         console.log(err);
 
+        // ❌ FAILURE AUDIT
+        await logAudit({
+            req,
+            module: "Order",
+            actionType: "MY_ORDERS_FAILED",
+            description: "Failed to fetch customer orders",
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json([]);
     }
 });
+
 module.exports = router;

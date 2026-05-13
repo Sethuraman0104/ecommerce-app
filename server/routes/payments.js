@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { poolPromise } = require('../config/db');
 const sql = require('mssql');
+const logAudit = require('../utils/auditLogger');
 
 // =========================
 // GET PAYMENTS
@@ -40,13 +41,37 @@ router.get('/', async (req, res) => {
             ORDER BY p.PaymentID DESC
         `);
 
+        await logAudit({
+            req,
+            module: "Payment",
+            actionType: "PAYMENT_LIST_VIEW",
+            description: "Viewed payments list",
+            status: "SUCCESS",
+            newValues: {
+                total: result.recordset.length
+            }
+        });
+
         res.json(result.recordset);
 
     } catch (err) {
         console.error(err);
+
+        await logAudit({
+            req,
+            module: "Payment",
+            actionType: "PAYMENT_LIST_FAILED",
+            description: "Failed to load payments list",
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: "Server error" });
     }
 });
+
 
 // =========================
 // UPDATE PAYMENT STATUS
@@ -56,6 +81,15 @@ router.put('/:id/status', async (req, res) => {
     const { status, remarks } = req.body;
 
     if (!status || !remarks) {
+
+        await logAudit({
+            req,
+            module: "Payment",
+            actionType: "PAYMENT_STATUS_UPDATE_INVALID",
+            description: "Status update failed - missing fields",
+            status: "FAILED"
+        });
+
         return res.status(400).json({ message: "Status and remarks required" });
     }
 
@@ -63,14 +97,12 @@ router.put('/:id/status', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // get old status
         const old = await pool.request()
             .input("id", sql.Int, req.params.id)
             .query("SELECT PaymentStatus FROM Payments WHERE PaymentID=@id");
 
         const oldStatus = old.recordset[0]?.PaymentStatus;
 
-        // update
         await pool.request()
             .input("id", sql.Int, req.params.id)
             .input("status", sql.NVarChar, status)
@@ -80,7 +112,6 @@ router.put('/:id/status', async (req, res) => {
                 WHERE PaymentID=@id
             `);
 
-        // insert history
         await pool.request()
             .input("pid", sql.Int, req.params.id)
             .input("old", sql.NVarChar, oldStatus)
@@ -92,13 +123,41 @@ router.put('/:id/status', async (req, res) => {
                 VALUES (@pid, @old, @new, @remarks)
             `);
 
+        await logAudit({
+            req,
+            module: "Payment",
+            actionType: "PAYMENT_STATUS_UPDATED",
+            description: `Payment status updated (PaymentID=${req.params.id})`,
+            status: "SUCCESS",
+            newValues: {
+                paymentId: req.params.id,
+                oldStatus,
+                newStatus: status,
+                remarks
+            }
+        });
+
         res.json({ message: "Status updated" });
 
     } catch (err) {
         console.error(err);
+
+        await logAudit({
+            req,
+            module: "Payment",
+            actionType: "PAYMENT_STATUS_UPDATE_FAILED",
+            description: "Payment status update failed",
+            status: "FAILED",
+            newValues: {
+                error: err.message,
+                paymentId: req.params.id
+            }
+        });
+
         res.status(500).json({ message: "Update failed" });
     }
 });
+
 
 // =========================
 // GET HISTORY
@@ -118,10 +177,30 @@ router.get('/:id/history', async (req, res) => {
                 ORDER BY HistoryID DESC
             `);
 
+        await logAudit({
+            req,
+            module: "Payment",
+            actionType: "PAYMENT_HISTORY_VIEW",
+            description: `Viewed payment history (PaymentID=${req.params.id})`,
+            status: "SUCCESS"
+        });
+
         res.json(result.recordset);
 
     } catch (err) {
         console.error(err);
+
+        await logAudit({
+            req,
+            module: "Payment",
+            actionType: "PAYMENT_HISTORY_FAILED",
+            description: "Failed to load payment history",
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: "History load failed" });
     }
 });

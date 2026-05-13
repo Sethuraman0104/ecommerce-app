@@ -2,15 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { poolPromise } = require('../config/db');
 
+/* =========================
+   AUDIT LOGGER (REQUIRED)
+========================= */
+const logAudit = require('../utils/auditLogger');
 
-// ==========================
-// HELPER: OFFER VALIDATION
-// ==========================
+/* =========================
+   HELPER: OFFER VALIDATION
+========================= */
 function normalizeOffer(hasOffer, offerStart, offerEnd) {
 
     const now = new Date();
 
-    // If no offer
     if (!hasOffer) {
         return {
             hasOffer: 0,
@@ -25,7 +28,6 @@ function normalizeOffer(hasOffer, offerStart, offerEnd) {
     const start = offerStart ? new Date(offerStart) : null;
     const end = offerEnd ? new Date(offerEnd) : null;
 
-    // Invalid dates → disable offer
     if (!start || !end || start > end) {
         return {
             hasOffer: 0,
@@ -37,7 +39,6 @@ function normalizeOffer(hasOffer, offerStart, offerEnd) {
         };
     }
 
-    // Expired check
     const active = (start <= now && end >= now) ? 1 : 0;
 
     return {
@@ -48,13 +49,40 @@ function normalizeOffer(hasOffer, offerStart, offerEnd) {
     };
 }
 
+/* =========================
+   FIXED USER EXTRACTOR
+========================= */
+function getLoggedInUser(req) {
 
-// ==========================
-// GET PRODUCTS
-// ==========================
+    try {
+
+        const auth = req.headers.authorization;
+        if (!auth) return null;
+
+        const token = auth.split(" ")[1];
+        if (!token) return null;
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // IMPORTANT FIX HERE
+        return {
+            userId: decoded.customerId || decoded.userId || null,
+            email: decoded.email || decoded.name || "Unknown",
+            role: decoded.role || "CUSTOMER"
+        };
+
+    } catch (err) {
+        return null;
+    }
+}
+
+/* =========================
+   GET PRODUCTS
+========================= */
 router.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
+        const loggedInUser = getLoggedInUser(req);
 
         const result = await pool.request().query(`
             SELECT 
@@ -95,30 +123,47 @@ router.get('/', async (req, res) => {
         const products = result.recordset.map(p => {
 
             let image = null;
-
             if (p.ImageData) {
                 image = `data:${p.MimeType};base64,${Buffer.from(p.ImageData).toString('base64')}`;
             }
 
-            return {
-                ...p,
-                Image: image
-            };
+            return { ...p, Image: image };
+        });
+
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+            userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_LIST_VIEW",
+            description: "Viewed product list",
+            status: "SUCCESS"
         });
 
         res.json(products);
 
     } catch (err) {
+
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+            userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_LIST_FAILED",
+            description: "Failed to load product list",
+            status: "FAILED",
+            newValues: { error: err.message }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
 
-
-// ==========================
-// ADD PRODUCT
-// ==========================
+/* =========================
+   ADD PRODUCT
+========================= */
 router.post('/', async (req, res) => {
-
+    const loggedInUser = getLoggedInUser(req);
     try {
 
         let {
@@ -143,9 +188,6 @@ router.post('/', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // ==========================
-        // OFFER NORMALIZATION (SAFE)
-        // ==========================
         const offer = normalizeOffer(
             hasOffer,
             offerStart,
@@ -178,16 +220,13 @@ router.post('/', async (req, res) => {
                     Barcode,
                     IsActive,
                     UnitType,
-
                     HasOffer,
                     OfferType,
                     OfferValue,
                     OfferStart,
                     OfferEnd
                 )
-
                 OUTPUT INSERTED.ProductID
-
                 VALUES (
                     @Name,
                     @Description,
@@ -197,7 +236,6 @@ router.post('/', async (req, res) => {
                     @Barcode,
                     @IsActive,
                     @UnitType,
-
                     @HasOffer,
                     @OfferType,
                     @OfferValue,
@@ -208,11 +246,7 @@ router.post('/', async (req, res) => {
 
         const productId = result.recordset[0].ProductID;
 
-        // ==========================
-        // IMAGE SAVE
-        // ==========================
         if (imageBase64) {
-
             const buffer = Buffer.from(imageBase64, 'base64');
 
             await pool.request()
@@ -225,19 +259,41 @@ router.post('/', async (req, res) => {
                 `);
         }
 
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+                userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_CREATED",
+            description: `Product created: ${name}`,
+            status: "SUCCESS",
+            newValues: { productId, name, price, stock, category }
+        });
+
         res.json({ message: "Product added" });
 
     } catch (err) {
+
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+                userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_CREATE_FAILED",
+            description: "Product creation failed",
+            status: "FAILED",
+            newValues: { error: err.message }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
 
-
-// ==========================
-// UPDATE PRODUCT
-// ==========================
+/* =========================
+   UPDATE PRODUCT
+========================= */
 router.put('/:id', async (req, res) => {
-
+const loggedInUser = getLoggedInUser(req);
     try {
 
         const { id } = req.params;
@@ -262,9 +318,6 @@ router.put('/:id', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // ==========================
-        // OFFER SAFE UPDATE
-        // ==========================
         const offer = normalizeOffer(
             hasOffer,
             offerStart,
@@ -298,20 +351,15 @@ router.put('/:id', async (req, res) => {
                     CategoryID = COALESCE(@CategoryID, CategoryID),
                     Barcode = COALESCE(@Barcode, Barcode),
                     UnitType = COALESCE(@UnitType, UnitType),
-
                     HasOffer = @HasOffer,
                     OfferType = @OfferType,
                     OfferValue = @OfferValue,
                     OfferStart = @OfferStart,
                     OfferEnd = @OfferEnd,
-
                     IsActive = COALESCE(@IsActive, IsActive)
                 WHERE ProductID = @ProductID
             `);
 
-        // ==========================
-        // IMAGE UPDATE
-        // ==========================
         if (imageBase64) {
 
             const buffer = Buffer.from(imageBase64, 'base64');
@@ -330,20 +378,41 @@ router.put('/:id', async (req, res) => {
                 `);
         }
 
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+                userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_UPDATED",
+            description: `Product updated ID=${id}`,
+            status: "SUCCESS",
+            newValues: { id, name, price, stock, isActive }
+        });
+
         res.json({ message: "Updated" });
 
     } catch (err) {
-        console.error(err);
+
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+                userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_UPDATE_FAILED",
+            description: "Product update failed",
+            status: "FAILED",
+            newValues: { error: err.message }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
 
-
-// ==========================
-// DELETE
-// ==========================
+/* =========================
+   DELETE PRODUCT
+========================= */
 router.delete('/:id', async (req, res) => {
-
+const loggedInUser = getLoggedInUser(req);
     try {
 
         const { id } = req.params;
@@ -357,9 +426,32 @@ router.delete('/:id', async (req, res) => {
             .input('ProductID', id)
             .query(`DELETE FROM Products WHERE ProductID=@ProductID`);
 
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+                userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_DELETED",
+            description: `Product deleted ID=${id}`,
+            status: "SUCCESS",
+            oldValues: { productId: id }
+        });
+
         res.json({ message: "Deleted" });
 
     } catch (err) {
+
+        await logAudit({
+            req,
+            userId: loggedInUser?.userId || null,
+                userName: loggedInUser?.email || "Unknown",
+            module: "Product",
+            actionType: "PRODUCT_DELETE_FAILED",
+            description: "Product deletion failed",
+            status: "FAILED",
+            newValues: { error: err.message }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });

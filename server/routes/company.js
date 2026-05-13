@@ -1,13 +1,18 @@
 const express = require('express');
 const router = express.Router();
+
 const { poolPromise } = require('../config/db');
 const sql = require('mssql');
 
-/* =========================
-   GET COMPANY
-========================= */
+const logAudit = require('../utils/auditLogger');
+
+/* =================================================
+   GET COMPANY PROFILE
+================================================= */
 router.get('/', async (req, res) => {
+
     try {
+
         const pool = await poolPromise;
 
         const result = await pool.request().query(`
@@ -28,27 +33,72 @@ router.get('/', async (req, res) => {
 
         const data = result.recordset[0];
 
-        if (!data) return res.json({});
+        // AUDIT SUCCESS
+        await logAudit({
+            req,
 
+            userId: req.user?.userId || null,
+            userName: req.user?.name || "System",
+
+            module: "Company",
+            actionType: "COMPANY_VIEW",
+
+            description: "Viewed company profile",
+
+            status: "SUCCESS"
+        });
+
+        if (!data) {
+            return res.json({});
+        }
+
+        // CONVERT LOGO TO BASE64
         if (data.Logo) {
+
             const mime = data.MimeType || 'image/png';
+
             data.Logo =
-                `data:${mime};base64,${Buffer.from(data.Logo).toString('base64')}`;
+                `data:${mime};base64,${Buffer
+                    .from(data.Logo)
+                    .toString('base64')}`;
         }
 
         res.json(data);
 
     } catch (err) {
+
         console.error("GET COMPANY ERROR:", err);
-        res.status(500).json({ message: "Server error" });
+
+        // AUDIT FAILURE
+        await logAudit({
+            req,
+
+            userId: req.user?.userId || null,
+            userName: req.user?.name || "System",
+
+            module: "Company",
+            actionType: "COMPANY_VIEW_FAILED",
+
+            description: "Failed to load company profile",
+
+            status: "FAILED",
+
+            newValues: {
+                error: err.message
+            }
+        });
+
+        res.status(500).json({
+            message: "Server error"
+        });
     }
 });
 
-
-/* =========================
-   SAVE / UPDATE COMPANY (FIXED 100%)
-========================= */
+/* =================================================
+   SAVE / UPDATE COMPANY PROFILE
+================================================= */
 router.post('/', async (req, res) => {
+
     try {
 
         const {
@@ -63,21 +113,36 @@ router.post('/', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // 🔥 SAFE IMAGE CONVERT
-        let logoBuffer = null;
-
-        if (logoBase64 && typeof logoBase64 === "string") {
-            logoBuffer = Buffer.from(logoBase64, 'base64');
-        }
-
-        // Get existing company
+        /* =========================================
+           GET EXISTING COMPANY
+        ========================================= */
         const existing = await pool.request().query(`
-            SELECT TOP 1 CompanyID FROM CompanyProfile ORDER BY CompanyID DESC
+            SELECT TOP 1 *
+            FROM CompanyProfile
+            ORDER BY CompanyID DESC
         `);
 
-        const companyId = existing.recordset[0]?.CompanyID;
+        const existingCompany = existing.recordset[0];
 
-        // 🔥 CREATE REQUEST
+        /* =========================================
+           SAFE IMAGE CONVERT
+        ========================================= */
+        let logoBuffer = null;
+
+        if (
+            logoBase64 &&
+            typeof logoBase64 === "string"
+        ) {
+
+            logoBuffer = Buffer.from(
+                logoBase64,
+                'base64'
+            );
+        }
+
+        /* =========================================
+           CREATE REQUEST
+        ========================================= */
         const request = pool.request()
             .input('Name', sql.NVarChar, name || null)
             .input('Email', sql.NVarChar, email || null)
@@ -86,19 +151,34 @@ router.post('/', async (req, res) => {
             .input('Address', sql.NVarChar, address || null)
             .input('MimeType', sql.NVarChar, mimeType || null);
 
-        // 🔥 IMPORTANT FIX FOR IMAGE TYPE
+        // SAFE IMAGE INPUT
         if (logoBuffer) {
-            request.input('Logo', sql.VarBinary(sql.MAX), logoBuffer);
+
+            request.input(
+                'Logo',
+                sql.VarBinary(sql.MAX),
+                logoBuffer
+            );
+
         } else {
-            request.input('Logo', sql.VarBinary(sql.MAX), null);
+
+            request.input(
+                'Logo',
+                sql.VarBinary(sql.MAX),
+                null
+            );
         }
 
-        /* =========================
-           UPDATE
-        ========================= */
-        if (companyId) {
+        /* =========================================
+           UPDATE COMPANY
+        ========================================= */
+        if (existingCompany) {
 
-            request.input('CompanyID', sql.Int, companyId);
+            request.input(
+                'CompanyID',
+                sql.Int,
+                existingCompany.CompanyID
+            );
 
             await request.query(`
                 UPDATE CompanyProfile
@@ -114,25 +194,127 @@ router.post('/', async (req, res) => {
                 WHERE CompanyID = @CompanyID
             `);
 
-        } 
-        /* =========================
-           INSERT
-        ========================= */
+            // AUDIT UPDATE
+            await logAudit({
+                req,
+
+                userId: req.user?.userId || null,
+                userName: req.user?.name || "Unknown",
+
+                module: "Company",
+                actionType: "COMPANY_UPDATED",
+
+                description:
+                    `Updated company profile "${existingCompany.Name || ''}"`,
+
+                oldValues: {
+                    name: existingCompany.Name,
+                    email: existingCompany.Email,
+                    phone: existingCompany.Phone,
+                    website: existingCompany.Website,
+                    address: existingCompany.Address
+                },
+
+                newValues: {
+                    name,
+                    email,
+                    phone,
+                    website,
+                    address,
+                    logoUpdated: !!logoBuffer
+                },
+
+                status: "SUCCESS"
+            });
+        }
+
+        /* =========================================
+           INSERT COMPANY
+        ========================================= */
         else {
 
             await request.query(`
                 INSERT INTO CompanyProfile
-                (Name, Email, Phone, Website, Address, Logo, MimeType, CreatedAt)
+                (
+                    Name,
+                    Email,
+                    Phone,
+                    Website,
+                    Address,
+                    Logo,
+                    MimeType,
+                    CreatedAt
+                )
                 VALUES
-                (@Name, @Email, @Phone, @Website, @Address, @Logo, @MimeType, GETDATE())
+                (
+                    @Name,
+                    @Email,
+                    @Phone,
+                    @Website,
+                    @Address,
+                    @Logo,
+                    @MimeType,
+                    GETDATE()
+                )
             `);
+
+            // AUDIT CREATE
+            await logAudit({
+                req,
+
+                userId: req.user?.userId || null,
+                userName: req.user?.name || "Unknown",
+
+                module: "Company",
+                actionType: "COMPANY_CREATED",
+
+                description:
+                    `Created company profile "${name}"`,
+
+                newValues: {
+                    name,
+                    email,
+                    phone,
+                    website,
+                    address,
+                    logoUploaded: !!logoBuffer
+                },
+
+                status: "SUCCESS"
+            });
         }
 
-        res.json({ message: "Company Saved Successfully" });
+        res.json({
+            success: true,
+            message: "Company Saved Successfully"
+        });
 
     } catch (err) {
+
         console.error("SAVE COMPANY ERROR:", err);
+
+        // AUDIT FAILURE
+        await logAudit({
+            req,
+
+            userId: req.user?.userId || null,
+            userName: req.user?.name || "Unknown",
+
+            module: "Company",
+            actionType: "COMPANY_SAVE_FAILED",
+
+            description:
+                "Failed to save company profile",
+
+            status: "FAILED",
+
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({
+            success: false,
             message: "Save failed",
             error: err.message
         });
