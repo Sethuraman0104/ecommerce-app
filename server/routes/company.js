@@ -5,11 +5,14 @@ const { poolPromise } = require('../config/db');
 const sql = require('mssql');
 
 const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser'); // ✅ STANDARD
 
 /* =================================================
    GET COMPANY PROFILE
 ================================================= */
 router.get('/', async (req, res) => {
+
+    const currentUser = getCurrentUser(req); // ✅ STANDARD
 
     try {
 
@@ -33,34 +36,25 @@ router.get('/', async (req, res) => {
 
         const data = result.recordset[0];
 
-        // AUDIT SUCCESS
         await logAudit({
             req,
 
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "System",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Company",
             actionType: "COMPANY_VIEW",
-
             description: "Viewed company profile",
-
             status: "SUCCESS"
         });
 
-        if (!data) {
-            return res.json({});
-        }
+        if (!data) return res.json({});
 
-        // CONVERT LOGO TO BASE64
+        // Convert logo
         if (data.Logo) {
-
             const mime = data.MimeType || 'image/png';
-
-            data.Logo =
-                `data:${mime};base64,${Buffer
-                    .from(data.Logo)
-                    .toString('base64')}`;
+            data.Logo = `data:${mime};base64,${Buffer.from(data.Logo).toString('base64')}`;
         }
 
         res.json(data);
@@ -69,28 +63,24 @@ router.get('/', async (req, res) => {
 
         console.error("GET COMPANY ERROR:", err);
 
-        // AUDIT FAILURE
+        const currentUser = getCurrentUser(req);
+
         await logAudit({
             req,
 
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "System",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Company",
             actionType: "COMPANY_VIEW_FAILED",
-
             description: "Failed to load company profile",
-
             status: "FAILED",
 
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
-        res.status(500).json({
-            message: "Server error"
-        });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -98,6 +88,8 @@ router.get('/', async (req, res) => {
    SAVE / UPDATE COMPANY PROFILE
 ================================================= */
 router.post('/', async (req, res) => {
+
+    const currentUser = getCurrentUser(req); // ✅ STANDARD
 
     try {
 
@@ -113,9 +105,6 @@ router.post('/', async (req, res) => {
 
         const pool = await poolPromise;
 
-        /* =========================================
-           GET EXISTING COMPANY
-        ========================================= */
         const existing = await pool.request().query(`
             SELECT TOP 1 *
             FROM CompanyProfile
@@ -124,61 +113,27 @@ router.post('/', async (req, res) => {
 
         const existingCompany = existing.recordset[0];
 
-        /* =========================================
-           SAFE IMAGE CONVERT
-        ========================================= */
         let logoBuffer = null;
 
-        if (
-            logoBase64 &&
-            typeof logoBase64 === "string"
-        ) {
-
-            logoBuffer = Buffer.from(
-                logoBase64,
-                'base64'
-            );
+        if (logoBase64 && typeof logoBase64 === "string") {
+            logoBuffer = Buffer.from(logoBase64, 'base64');
         }
 
-        /* =========================================
-           CREATE REQUEST
-        ========================================= */
         const request = pool.request()
             .input('Name', sql.NVarChar, name || null)
             .input('Email', sql.NVarChar, email || null)
             .input('Phone', sql.NVarChar, phone || null)
             .input('Website', sql.NVarChar, website || null)
             .input('Address', sql.NVarChar, address || null)
-            .input('MimeType', sql.NVarChar, mimeType || null);
+            .input('MimeType', sql.NVarChar, mimeType || null)
+            .input('Logo', sql.VarBinary(sql.MAX), logoBuffer);
 
-        // SAFE IMAGE INPUT
-        if (logoBuffer) {
-
-            request.input(
-                'Logo',
-                sql.VarBinary(sql.MAX),
-                logoBuffer
-            );
-
-        } else {
-
-            request.input(
-                'Logo',
-                sql.VarBinary(sql.MAX),
-                null
-            );
-        }
-
-        /* =========================================
-           UPDATE COMPANY
-        ========================================= */
+        /* =========================
+           UPDATE
+        ========================= */
         if (existingCompany) {
 
-            request.input(
-                'CompanyID',
-                sql.Int,
-                existingCompany.CompanyID
-            );
+            request.input('CompanyID', sql.Int, existingCompany.CompanyID);
 
             await request.query(`
                 UPDATE CompanyProfile
@@ -194,18 +149,16 @@ router.post('/', async (req, res) => {
                 WHERE CompanyID = @CompanyID
             `);
 
-            // AUDIT UPDATE
             await logAudit({
                 req,
 
-                userId: req.user?.userId || null,
-                userName: req.user?.name || "Unknown",
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
 
                 module: "Company",
                 actionType: "COMPANY_UPDATED",
-
-                description:
-                    `Updated company profile "${existingCompany.Name || ''}"`,
+                description: `Updated company profile "${existingCompany.Name || ''}"`,
 
                 oldValues: {
                     name: existingCompany.Name,
@@ -226,12 +179,8 @@ router.post('/', async (req, res) => {
 
                 status: "SUCCESS"
             });
-        }
 
-        /* =========================================
-           INSERT COMPANY
-        ========================================= */
-        else {
+        } else {
 
             await request.query(`
                 INSERT INTO CompanyProfile
@@ -258,18 +207,16 @@ router.post('/', async (req, res) => {
                 )
             `);
 
-            // AUDIT CREATE
             await logAudit({
                 req,
 
-                userId: req.user?.userId || null,
-                userName: req.user?.name || "Unknown",
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
 
                 module: "Company",
                 actionType: "COMPANY_CREATED",
-
-                description:
-                    `Created company profile "${name}"`,
+                description: `Created company profile "${name}"`,
 
                 newValues: {
                     name,
@@ -293,19 +240,18 @@ router.post('/', async (req, res) => {
 
         console.error("SAVE COMPANY ERROR:", err);
 
-        // AUDIT FAILURE
+        const currentUser = getCurrentUser(req);
+
         await logAudit({
             req,
 
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Company",
             actionType: "COMPANY_SAVE_FAILED",
-
-            description:
-                "Failed to save company profile",
-
+            description: "Failed to save company profile",
             status: "FAILED",
 
             newValues: {

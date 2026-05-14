@@ -27,14 +27,49 @@ const Payments = {
 
     const symbol = App.CURRENCY_SYMBOL ?? "$";
 
-    if (!this.DATA.length) {
+    // =========================
+    // GET FILTER VALUES
+    // =========================
+    const search = (document.getElementById("searchBox")?.value || "")
+        .toLowerCase()
+        .trim();
+
+    const status = document.getElementById("statusFilter")?.value || "";
+    const method = document.getElementById("methodFilter")?.value || "";
+
+    // =========================
+    // FILTER DATA
+    // =========================
+    let filtered = this.DATA.filter(p => {
+
+        const matchesSearch =
+            !search ||
+            (p.CustomerName || "").toLowerCase().includes(search) ||
+            (p.OrderID + "").includes(search) ||
+            (p.TransactionID || "").toLowerCase().includes(search);
+
+        const matchesStatus =
+            !status ||
+            (p.PaymentStatus || "").toLowerCase() === status.toLowerCase();
+
+        const matchesMethod =
+            !method ||
+            (p.PaymentMethod || "").toLowerCase() === method.toLowerCase();
+
+        return matchesSearch && matchesStatus && matchesMethod;
+    });
+
+    // =========================
+    // EMPTY STATE
+    // =========================
+    if (!filtered.length) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="9" class="empty-state">
                     <div class="empty-box">
                         <i class="fa fa-credit-card"></i>
                         <h3>No Payments Found</h3>
-                        <p>Payments will appear here once orders are processed.</p>
+                        <p>Try adjusting your filters</p>
                     </div>
                 </td>
             </tr>
@@ -42,7 +77,10 @@ const Payments = {
         return;
     }
 
-    this.DATA.forEach(p => {
+    // =========================
+    // RENDER ROWS
+    // =========================
+    filtered.forEach(p => {
 
         const tr = document.createElement("tr");
 
@@ -50,9 +88,7 @@ const Payments = {
             <td>#${p.PaymentID}</td>
             <td>#${p.OrderID}</td>
             <td>${p.CustomerName || "-"}</td>
-
             <td>${symbol}${Number(p.Amount || 0).toFixed(2)}</td>
-
             <td>${p.PaymentMethod}</td>
 
             <td>

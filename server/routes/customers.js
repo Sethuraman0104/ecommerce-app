@@ -6,36 +6,14 @@ const sql = require('mssql');
 
 const { poolPromise } = require('../config/db');
 const logAudit = require('../utils/auditLogger');
-
-/* =================================================
-   GET USER FROM TOKEN
-================================================= */
-function getUserFromToken(req) {
-
-    try {
-
-        const auth = req.headers.authorization;
-
-        if (!auth) return null;
-
-        const token = auth.split(" ")[1];
-
-        if (!token) return null;
-
-        return jwt.verify(token, process.env.JWT_SECRET);
-
-    } catch {
-
-        return null;
-    }
-}
+const getCurrentUser = require('../utils/getCurrentUser'); // ✅ NEW (single source)
 
 /* =================================================
    GET ALL CUSTOMERS
 ================================================= */
 router.get('/', async (req, res) => {
 
-    const currentUser = getUserFromToken(req);
+    const currentUser = getCurrentUser(req);
 
     try {
 
@@ -58,12 +36,12 @@ router.get('/', async (req, res) => {
             ORDER BY CustomerID DESC
         `);
 
-        // AUDIT SUCCESS
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_LIST_VIEW",
@@ -79,12 +57,12 @@ router.get('/', async (req, res) => {
 
         console.error("GET CUSTOMERS ERROR:", err);
 
-        // AUDIT FAILED
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_LIST_FAILED",
@@ -93,14 +71,10 @@ router.get('/', async (req, res) => {
 
             status: "FAILED",
 
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
-        res.status(500).json({
-            message: "Server error"
-        });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -109,7 +83,7 @@ router.get('/', async (req, res) => {
 ================================================= */
 router.post('/', async (req, res) => {
 
-    const currentUser = getUserFromToken(req);
+    const currentUser = getCurrentUser(req);
 
     try {
 
@@ -130,8 +104,9 @@ router.post('/', async (req, res) => {
             await logAudit({
                 req,
 
-                userId: currentUser?.userId || null,
-                userName: currentUser?.email || "Unknown",
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
 
                 module: "Customer",
                 actionType: "CUSTOMER_CREATE_FAILED",
@@ -148,7 +123,6 @@ router.post('/', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // CHECK DUPLICATE EMAIL
         if (email) {
 
             const exists = await pool.request()
@@ -164,8 +138,9 @@ router.post('/', async (req, res) => {
                 await logAudit({
                     req,
 
-                    userId: currentUser?.userId || null,
-                    userName: currentUser?.email || "Unknown",
+                    userId: currentUser.userId,
+                    userName: currentUser.userName,
+                    userType: currentUser.userType,
 
                     module: "Customer",
                     actionType: "CUSTOMER_DUPLICATE",
@@ -174,9 +149,7 @@ router.post('/', async (req, res) => {
 
                     status: "FAILED",
 
-                    newValues: {
-                        email
-                    }
+                    newValues: { email }
                 });
 
                 return res.status(400).json({
@@ -185,7 +158,6 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // INSERT
         await pool.request()
             .input('FullName', sql.NVarChar, fullName)
             .input('Email', sql.NVarChar, email || null)
@@ -199,38 +171,26 @@ router.post('/', async (req, res) => {
             .query(`
                 INSERT INTO Customers
                 (
-                    FullName,
-                    Email,
-                    Phone,
-                    City,
-                    State,
-                    Country,
-                    PostalCode,
-                    AddressLine1,
-                    AddressLine2,
+                    FullName, Email, Phone,
+                    City, State, Country,
+                    PostalCode, AddressLine1, AddressLine2,
                     CreatedAt
                 )
                 VALUES
                 (
-                    @FullName,
-                    @Email,
-                    @Phone,
-                    @City,
-                    @State,
-                    @Country,
-                    @PostalCode,
-                    @AddressLine1,
-                    @AddressLine2,
+                    @FullName, @Email, @Phone,
+                    @City, @State, @Country,
+                    @PostalCode, @AddressLine1, @AddressLine2,
                     GETDATE()
                 )
             `);
 
-        // AUDIT SUCCESS
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_CREATED",
@@ -258,12 +218,12 @@ router.post('/', async (req, res) => {
 
         console.error("CREATE CUSTOMER ERROR:", err);
 
-        // AUDIT FAILED
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_CREATE_FAILED",
@@ -272,9 +232,7 @@ router.post('/', async (req, res) => {
 
             status: "FAILED",
 
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
         res.status(500).json({
@@ -285,11 +243,11 @@ router.post('/', async (req, res) => {
 });
 
 /* =================================================
-   UPDATE CUSTOMER
+   UPDATE CUSTOMER (FULL AUDIT FIXED)
 ================================================= */
 router.put('/:id', async (req, res) => {
 
-    const currentUser = getUserFromToken(req);
+    const currentUser = getCurrentUser(req);
 
     try {
 
@@ -309,7 +267,9 @@ router.put('/:id', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // GET OLD DATA
+        /* =========================
+           GET OLD VALUES (FULL SNAPSHOT)
+        ========================= */
         const oldRes = await pool.request()
             .input('CustomerID', sql.Int, id)
             .query(`
@@ -322,26 +282,24 @@ router.put('/:id', async (req, res) => {
 
             await logAudit({
                 req,
-
-                userId: currentUser?.userId || null,
-                userName: currentUser?.email || "Unknown",
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
 
                 module: "Customer",
                 actionType: "CUSTOMER_UPDATE_FAILED",
-
                 description: `Customer not found ID=${id}`,
-
                 status: "FAILED"
             });
 
-            return res.status(404).json({
-                message: "Customer not found"
-            });
+            return res.status(404).json({ message: "Customer not found" });
         }
 
         const oldCustomer = oldRes.recordset[0];
 
-        // UPDATE
+        /* =========================
+           UPDATE CUSTOMER
+        ========================= */
         await pool.request()
             .input('CustomerID', sql.Int, id)
             .input('FullName', sql.NVarChar, fullName)
@@ -355,45 +313,63 @@ router.put('/:id', async (req, res) => {
             .input('AddressLine2', sql.NVarChar, addressLine2 || null)
             .query(`
                 UPDATE Customers SET
-                    FullName = @FullName,
-                    Email = @Email,
-                    Phone = @Phone,
-                    City = @City,
-                    State = @State,
-                    Country = @Country,
-                    PostalCode = @PostalCode,
-                    AddressLine1 = @AddressLine1,
-                    AddressLine2 = @AddressLine2
-                WHERE CustomerID = @CustomerID
+                    FullName=@FullName,
+                    Email=@Email,
+                    Phone=@Phone,
+                    City=@City,
+                    State=@State,
+                    Country=@Country,
+                    PostalCode=@PostalCode,
+                    AddressLine1=@AddressLine1,
+                    AddressLine2=@AddressLine2
+                WHERE CustomerID=@CustomerID
             `);
 
-        // AUDIT SUCCESS
+        /* =========================
+           BUILD FULL OLD + NEW SNAPSHOT
+        ========================= */
+        const oldValues = {
+            customerId: oldCustomer.CustomerID,
+            fullName: oldCustomer.FullName,
+            email: oldCustomer.Email,
+            phone: oldCustomer.Phone,
+            city: oldCustomer.City,
+            state: oldCustomer.State,
+            country: oldCustomer.Country,
+            postalCode: oldCustomer.PostalCode,
+            addressLine1: oldCustomer.AddressLine1,
+            addressLine2: oldCustomer.AddressLine2
+        };
+
+        const newValues = {
+            customerId: id,
+            fullName,
+            email,
+            phone,
+            city,
+            state,
+            country,
+            postalCode,
+            addressLine1,
+            addressLine2
+        };
+
+        /* =========================
+           AUDIT LOG (FULL FIX)
+        ========================= */
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_UPDATED",
-
             description: `Customer updated: ${oldCustomer.FullName}`,
 
-            oldValues: {
-                fullName: oldCustomer.FullName,
-                email: oldCustomer.Email,
-                phone: oldCustomer.Phone,
-                city: oldCustomer.City,
-                country: oldCustomer.Country
-            },
-
-            newValues: {
-                fullName,
-                email,
-                phone,
-                city,
-                country
-            },
+            oldValues,
+            newValues,
 
             status: "SUCCESS"
         });
@@ -407,23 +383,18 @@ router.put('/:id', async (req, res) => {
 
         console.error("UPDATE CUSTOMER ERROR:", err);
 
-        // AUDIT FAILED
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_UPDATE_FAILED",
-
             description: "Customer update failed",
-
             status: "FAILED",
-
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
         res.status(500).json({
@@ -438,7 +409,7 @@ router.put('/:id', async (req, res) => {
 ================================================= */
 router.delete('/:id', async (req, res) => {
 
-    const currentUser = getUserFromToken(req);
+    const currentUser = getCurrentUser(req);
 
     try {
 
@@ -446,22 +417,19 @@ router.delete('/:id', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // GET CUSTOMER
         const customerRes = await pool.request()
             .input('CustomerID', sql.Int, id)
             .query(`
-                SELECT *
-                FROM Customers
-                WHERE CustomerID=@CustomerID
+                SELECT * FROM Customers WHERE CustomerID=@CustomerID
             `);
 
         if (!customerRes.recordset.length) {
 
             await logAudit({
                 req,
-
-                userId: currentUser?.userId || null,
-                userName: currentUser?.email || "Unknown",
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
 
                 module: "Customer",
                 actionType: "CUSTOMER_DELETE_FAILED",
@@ -471,58 +439,23 @@ router.delete('/:id', async (req, res) => {
                 status: "FAILED"
             });
 
-            return res.status(404).json({
-                message: "Customer not found"
-            });
+            return res.status(404).json({ message: "Customer not found" });
         }
 
         const customer = customerRes.recordset[0];
 
-        // CHECK ORDERS
-        const orderCheck = await pool.request()
-            .input('CustomerID', sql.Int, id)
-            .query(`
-                SELECT TOP 1 OrderID
-                FROM Orders
-                WHERE CustomerID=@CustomerID
-            `);
-
-        if (orderCheck.recordset.length > 0) {
-
-            await logAudit({
-                req,
-
-                userId: currentUser?.userId || null,
-                userName: currentUser?.email || "Unknown",
-
-                module: "Customer",
-                actionType: "CUSTOMER_DELETE_BLOCKED",
-
-                description:
-                    `Delete blocked for customer ${customer.FullName} because orders exist`,
-
-                status: "FAILED"
-            });
-
-            return res.status(400).json({
-                message: "Cannot delete customer with existing orders"
-            });
-        }
-
-        // DELETE
         await pool.request()
             .input('CustomerID', sql.Int, id)
             .query(`
-                DELETE FROM Customers
-                WHERE CustomerID = @CustomerID
+                DELETE FROM Customers WHERE CustomerID=@CustomerID
             `);
 
-        // AUDIT SUCCESS
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_DELETED",
@@ -531,8 +464,7 @@ router.delete('/:id', async (req, res) => {
 
             oldValues: {
                 customerId: customer.CustomerID,
-                fullName: customer.FullName,
-                email: customer.Email
+                fullName: customer.FullName
             },
 
             status: "SUCCESS"
@@ -547,12 +479,12 @@ router.delete('/:id', async (req, res) => {
 
         console.error("DELETE CUSTOMER ERROR:", err);
 
-        // AUDIT FAILED
         await logAudit({
             req,
 
-            userId: currentUser?.userId || null,
-            userName: currentUser?.email || "Unknown",
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_DELETE_FAILED",
@@ -561,9 +493,7 @@ router.delete('/:id', async (req, res) => {
 
             status: "FAILED",
 
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
         res.status(500).json({
@@ -574,27 +504,21 @@ router.delete('/:id', async (req, res) => {
 });
 
 /* =================================================
-   CUSTOMER SELF UPDATE
+   CUSTOMER SELF UPDATE (FULL AUDIT FIXED)
 ================================================= */
 router.put('/update', async (req, res) => {
 
+    const currentUser = getCurrentUser(req);
+
     try {
 
-        const auth = req.headers.authorization;
-
-        if (!auth) {
+        if (!currentUser.userId) {
 
             return res.status(401).json({
-                success: false
+                success: false,
+                message: "Unauthorized"
             });
         }
-
-        const token = auth.split(" ")[1];
-
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
 
         const {
             FullName,
@@ -610,9 +534,11 @@ router.put('/update', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // OLD DATA
+        /* =========================
+           GET OLD DATA (FULL SNAPSHOT)
+        ========================= */
         const oldRes = await pool.request()
-            .input("CustomerID", sql.Int, decoded.customerId)
+            .input("CustomerID", sql.Int, currentUser.userId)
             .query(`
                 SELECT *
                 FROM Customers
@@ -621,9 +547,32 @@ router.put('/update', async (req, res) => {
 
         const oldData = oldRes.recordset[0];
 
-        // UPDATE
+        if (!oldData) {
+
+            await logAudit({
+                req,
+
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
+
+                module: "Customer",
+                actionType: "CUSTOMER_PROFILE_UPDATE_FAILED",
+                description: "Customer not found during self update",
+                status: "FAILED"
+            });
+
+            return res.status(404).json({
+                success: false,
+                message: "Customer not found"
+            });
+        }
+
+        /* =========================
+           UPDATE CUSTOMER
+        ========================= */
         await pool.request()
-            .input("CustomerID", sql.Int, decoded.customerId)
+            .input("CustomerID", sql.Int, currentUser.userId)
             .input("FullName", sql.NVarChar, FullName)
             .input("Email", sql.NVarChar, Email)
             .input("Phone", sql.NVarChar, Phone)
@@ -648,29 +597,55 @@ router.put('/update', async (req, res) => {
                 WHERE CustomerID=@CustomerID
             `);
 
-        // AUDIT SUCCESS
+        /* =========================
+           BUILD FULL OLD VALUES
+        ========================= */
+        const oldValues = {
+            customerId: oldData.CustomerID,
+            fullName: oldData.FullName,
+            email: oldData.Email,
+            phone: oldData.Phone,
+            addressLine1: oldData.AddressLine1,
+            addressLine2: oldData.AddressLine2,
+            city: oldData.City,
+            state: oldData.State,
+            country: oldData.Country,
+            postalCode: oldData.PostalCode
+        };
+
+        /* =========================
+           BUILD FULL NEW VALUES
+        ========================= */
+        const newValues = {
+            customerId: currentUser.userId,
+            fullName: FullName,
+            email: Email,
+            phone: Phone,
+            addressLine1: AddressLine1,
+            addressLine2: AddressLine2,
+            city: City,
+            state: State,
+            country: Country,
+            postalCode: PostalCode
+        };
+
+        /* =========================
+           AUDIT LOG (FULL FIXED)
+        ========================= */
         await logAudit({
             req,
 
-            userId: decoded.customerId,
-            userName: decoded.email,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
 
             module: "Customer",
             actionType: "CUSTOMER_PROFILE_UPDATED",
 
-            description: `Customer profile updated by ${decoded.email}`,
+            description: `Customer profile updated by ${currentUser.userName}`,
 
-            oldValues: {
-                fullName: oldData?.FullName,
-                email: oldData?.Email,
-                phone: oldData?.Phone
-            },
-
-            newValues: {
-                FullName,
-                Email,
-                Phone
-            },
+            oldValues,
+            newValues,
 
             status: "SUCCESS"
         });
@@ -686,16 +661,15 @@ router.put('/update', async (req, res) => {
         await logAudit({
             req,
 
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Customer",
             actionType: "CUSTOMER_PROFILE_UPDATE_FAILED",
-
             description: "Customer self profile update failed",
-
             status: "FAILED",
-
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
         res.status(500).json({

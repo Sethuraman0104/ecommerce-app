@@ -1,14 +1,19 @@
 const express = require("express");
 const router = express.Router();
+
 const { poolPromise } = require("../config/db");
 const sql = require("mssql");
 
-const logAudit = require("../utils/auditLogger"); // ✅ adjust path if needed
+const logAudit = require("../utils/auditLogger");
+const getCurrentUser = require("../utils/getCurrentUser"); // ✅ NEW
 
 /* =========================
    SETTINGS GET
 ========================= */
 router.get("/", async (req, res) => {
+
+    const currentUser = getCurrentUser(req); // ✅ FIX
+
     try {
         const pool = await poolPromise;
 
@@ -17,13 +22,16 @@ router.get("/", async (req, res) => {
             FROM Settings
         `);
 
-        // 🔵 AUDIT LOG (READ SETTINGS)
         await logAudit({
             req,
-            userId: null,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Settings",
             actionType: "READ",
-            description: "Viewed application settings"
+            description: "Viewed application settings",
+            status: "SUCCESS"
         });
 
         res.json(result.recordset);
@@ -31,9 +39,14 @@ router.get("/", async (req, res) => {
     } catch (err) {
         console.error(err);
 
+        const currentUser = getCurrentUser(req);
+
         await logAudit({
             req,
-            userId: null,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Settings",
             actionType: "READ",
             description: "Failed to load settings",
@@ -48,6 +61,9 @@ router.get("/", async (req, res) => {
    SETTINGS UPDATE
 ========================= */
 router.put("/", async (req, res) => {
+
+    const currentUser = getCurrentUser(req); // ✅ FIX
+
     try {
         const pool = await poolPromise;
         const items = req.body;
@@ -56,7 +72,6 @@ router.put("/", async (req, res) => {
 
         for (let item of items) {
 
-            // get old value for audit
             const old = await pool.request()
                 .input("KeyName", sql.NVarChar, item.keyName)
                 .query(`
@@ -79,10 +94,12 @@ router.put("/", async (req, res) => {
                 `);
         }
 
-        // 🔵 AUDIT LOG (SETTINGS UPDATE)
         await logAudit({
             req,
-            userId: null,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Settings",
             actionType: "UPDATE",
             description: "Updated system settings",
@@ -94,11 +111,17 @@ router.put("/", async (req, res) => {
         res.json({ message: "Settings updated successfully" });
 
     } catch (err) {
+
         console.error(err);
+
+        const currentUser = getCurrentUser(req);
 
         await logAudit({
             req,
-            userId: null,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Settings",
             actionType: "UPDATE",
             description: "Failed to update settings",
@@ -113,6 +136,9 @@ router.put("/", async (req, res) => {
    CURRENCIES LIST
 ========================= */
 router.get("/currencies", async (req, res) => {
+
+    const currentUser = getCurrentUser(req); // ✅ FIX
+
     try {
         const pool = await poolPromise;
 
@@ -123,23 +149,32 @@ router.get("/currencies", async (req, res) => {
             ORDER BY Code
         `);
 
-        // 🔵 AUDIT LOG
         await logAudit({
             req,
-            userId: null,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Currency",
             actionType: "READ",
-            description: "Viewed active currencies"
+            description: "Viewed active currencies",
+            status: "SUCCESS"
         });
 
         res.json(result.recordset);
 
     } catch (err) {
+
         console.error(err);
+
+        const currentUser = getCurrentUser(req);
 
         await logAudit({
             req,
-            userId: null,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Currency",
             actionType: "READ",
             description: "Failed to load currencies",
@@ -154,8 +189,10 @@ router.get("/currencies", async (req, res) => {
    ADD / UPDATE CURRENCY
 ========================= */
 router.post("/currencies", async (req, res) => {
-    try {
 
+    const currentUser = getCurrentUser(req); // ✅ FIX
+
+    try {
         const { CurrencyID, Code, Name, Symbol, IsActive } = req.body;
 
         const pool = await poolPromise;
@@ -170,7 +207,6 @@ router.post("/currencies", async (req, res) => {
 
         if (CurrencyID) {
 
-            // get old
             const old = await pool.request()
                 .input("CurrencyID", sql.Int, CurrencyID)
                 .query(`
@@ -189,7 +225,10 @@ router.post("/currencies", async (req, res) => {
 
             await logAudit({
                 req,
-                userId: null,
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
+
                 module: "Currency",
                 actionType: "UPDATE",
                 description: `Updated currency ${Code}`,
@@ -207,7 +246,10 @@ router.post("/currencies", async (req, res) => {
 
             await logAudit({
                 req,
-                userId: null,
+                userId: currentUser.userId,
+                userName: currentUser.userName,
+                userType: currentUser.userType,
+
                 module: "Currency",
                 actionType: "CREATE",
                 description: `Added new currency ${Code}`,
@@ -219,11 +261,17 @@ router.post("/currencies", async (req, res) => {
         res.json({ message: "Saved" });
 
     } catch (err) {
+
         console.error(err);
+
+        const currentUser = getCurrentUser(req);
 
         await logAudit({
             req,
-            userId: null,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Currency",
             actionType: "ERROR",
             description: "Currency save failed",

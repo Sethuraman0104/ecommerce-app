@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { poolPromise } = require('../config/db');
+const sql = require('mssql');
 
-/* =========================
-   AUDIT LOGGER (REQUIRED)
-========================= */
 const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser');
 
 /* =========================
    HELPER: OFFER VALIDATION
@@ -50,39 +49,15 @@ function normalizeOffer(hasOffer, offerStart, offerEnd) {
 }
 
 /* =========================
-   FIXED USER EXTRACTOR
-========================= */
-function getLoggedInUser(req) {
-
-    try {
-
-        const auth = req.headers.authorization;
-        if (!auth) return null;
-
-        const token = auth.split(" ")[1];
-        if (!token) return null;
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // IMPORTANT FIX HERE
-        return {
-            userId: decoded.customerId || decoded.userId || null,
-            email: decoded.email || decoded.name || "Unknown",
-            role: decoded.role || "CUSTOMER"
-        };
-
-    } catch (err) {
-        return null;
-    }
-}
-
-/* =========================
    GET PRODUCTS
 ========================= */
 router.get('/', async (req, res) => {
+
+    const loggedInUser = getCurrentUser(req);
+
     try {
+
         const pool = await poolPromise;
-        const loggedInUser = getLoggedInUser(req);
 
         const result = await pool.request().query(`
             SELECT 
@@ -132,8 +107,10 @@ router.get('/', async (req, res) => {
 
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_LIST_VIEW",
             description: "Viewed product list",
@@ -146,8 +123,10 @@ router.get('/', async (req, res) => {
 
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_LIST_FAILED",
             description: "Failed to load product list",
@@ -160,10 +139,12 @@ router.get('/', async (req, res) => {
 });
 
 /* =========================
-   ADD PRODUCT
+   ADD PRODUCT (FIXED AUDIT)
 ========================= */
 router.post('/', async (req, res) => {
-    const loggedInUser = getLoggedInUser(req);
+
+    const loggedInUser = getCurrentUser(req);
+
     try {
 
         let {
@@ -188,11 +169,7 @@ router.post('/', async (req, res) => {
 
         const pool = await poolPromise;
 
-        const offer = normalizeOffer(
-            hasOffer,
-            offerStart,
-            offerEnd
-        );
+        const offer = normalizeOffer(hasOffer, offerStart, offerEnd);
 
         const result = await pool.request()
             .input('Name', name)
@@ -247,6 +224,7 @@ router.post('/', async (req, res) => {
         const productId = result.recordset[0].ProductID;
 
         if (imageBase64) {
+
             const buffer = Buffer.from(imageBase64, 'base64');
 
             await pool.request()
@@ -259,15 +237,39 @@ router.post('/', async (req, res) => {
                 `);
         }
 
+        /* =========================
+           FIXED AUDIT (ADD PRODUCT)
+        ========================= */
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_CREATED",
             description: `Product created: ${name}`,
+
             status: "SUCCESS",
-            newValues: { productId, name, price, stock, category }
+
+            newValues: {
+                ProductID: productId,
+                Name: name,
+                Description: description,
+                Price: price,
+                Stock: stock,
+                CategoryID: category,
+                Barcode: barcode,
+                UnitType: unitType,
+                IsActive: isActive ?? 1,
+
+                // ✅ IMPORTANT: offer captured properly
+                HasOffer: offer.hasOffer,
+                OfferType: offer.hasOffer ? offerType : null,
+                OfferValue: offer.hasOffer ? offerValue : null,
+                OfferStart: offer.offerStart,
+                OfferEnd: offer.offerEnd
+            }
         });
 
         res.json({ message: "Product added" });
@@ -276,8 +278,10 @@ router.post('/', async (req, res) => {
 
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_CREATE_FAILED",
             description: "Product creation failed",
@@ -290,10 +294,12 @@ router.post('/', async (req, res) => {
 });
 
 /* =========================
-   UPDATE PRODUCT
+   UPDATE PRODUCT (FIXED AUDIT)
 ========================= */
 router.put('/:id', async (req, res) => {
-const loggedInUser = getLoggedInUser(req);
+
+    const loggedInUser = getCurrentUser(req);
+
     try {
 
         const { id } = req.params;
@@ -318,14 +324,47 @@ const loggedInUser = getLoggedInUser(req);
 
         const pool = await poolPromise;
 
-        const offer = normalizeOffer(
-            hasOffer,
-            offerStart,
-            offerEnd
-        );
+        /* =========================
+           OLD VALUES (BEFORE UPDATE)
+        ========================= */
+        const oldResult = await pool.request()
+            .input('ProductID', sql.Int, id)
+            .query(`
+                SELECT 
+                    ProductID,
+                    Name,
+                    Description,
+                    Price,
+                    Stock,
+                    CategoryID,
+                    Barcode,
+                    UnitType,
+                    HasOffer,
+                    OfferType,
+                    OfferValue,
+                    OfferStart,
+                    OfferEnd,
+                    IsActive
+                FROM Products
+                WHERE ProductID = @ProductID
+            `);
 
+        const oldValues = oldResult.recordset[0];
+
+        if (!oldValues) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        /* =========================
+           NORMALIZE OFFER
+        ========================= */
+        const offer = normalizeOffer(hasOffer, offerStart, offerEnd);
+
+        /* =========================
+           UPDATE PRODUCT
+        ========================= */
         await pool.request()
-            .input('ProductID', id)
+            .input('ProductID', sql.Int, id)
             .input('Name', name)
             .input('Description', description)
             .input('Price', price)
@@ -333,15 +372,12 @@ const loggedInUser = getLoggedInUser(req);
             .input('CategoryID', category)
             .input('Barcode', barcode)
             .input('UnitType', unitType)
-
             .input('HasOffer', offer.hasOffer)
             .input('OfferType', offer.hasOffer ? offerType : null)
             .input('OfferValue', offer.hasOffer ? offerValue : null)
             .input('OfferStart', offer.offerStart)
             .input('OfferEnd', offer.offerEnd)
-
             .input('IsActive', isActive)
-
             .query(`
                 UPDATE Products
                 SET Name = COALESCE(@Name, Name),
@@ -360,16 +396,19 @@ const loggedInUser = getLoggedInUser(req);
                 WHERE ProductID = @ProductID
             `);
 
+        /* =========================
+           IMAGE UPDATE
+        ========================= */
         if (imageBase64) {
 
             const buffer = Buffer.from(imageBase64, 'base64');
 
             await pool.request()
-                .input('ProductID', id)
+                .input('ProductID', sql.Int, id)
                 .query(`DELETE FROM ProductImages WHERE ProductID=@ProductID`);
 
             await pool.request()
-                .input('ProductID', id)
+                .input('ProductID', sql.Int, id)
                 .input('ImageData', buffer)
                 .input('MimeType', mimeType)
                 .query(`
@@ -378,15 +417,41 @@ const loggedInUser = getLoggedInUser(req);
                 `);
         }
 
+        /* =========================
+           FIXED AUDIT (UPDATE PRODUCT)
+        ========================= */
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_UPDATED",
             description: `Product updated ID=${id}`,
-            status: "SUCCESS",
-            newValues: { id, name, price, stock, isActive }
+
+            oldValues: oldValues,
+
+            newValues: {
+                ProductID: id,
+                Name: name,
+                Description: description,
+                Price: price,
+                Stock: stock,
+                CategoryID: category,
+                Barcode: barcode,
+                UnitType: unitType,
+                IsActive: isActive,
+
+                // ✅ FIXED OFFER TRACKING
+                HasOffer: offer.hasOffer,
+                OfferType: offer.hasOffer ? offerType : null,
+                OfferValue: offer.hasOffer ? offerValue : null,
+                OfferStart: offer.offerStart,
+                OfferEnd: offer.offerEnd
+            },
+
+            status: "SUCCESS"
         });
 
         res.json({ message: "Updated" });
@@ -395,8 +460,10 @@ const loggedInUser = getLoggedInUser(req);
 
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_UPDATE_FAILED",
             description: "Product update failed",
@@ -412,7 +479,9 @@ const loggedInUser = getLoggedInUser(req);
    DELETE PRODUCT
 ========================= */
 router.delete('/:id', async (req, res) => {
-const loggedInUser = getLoggedInUser(req);
+
+    const loggedInUser = getCurrentUser(req);
+
     try {
 
         const { id } = req.params;
@@ -428,8 +497,10 @@ const loggedInUser = getLoggedInUser(req);
 
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_DELETED",
             description: `Product deleted ID=${id}`,
@@ -443,8 +514,10 @@ const loggedInUser = getLoggedInUser(req);
 
         await logAudit({
             req,
-            userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+            userId: loggedInUser.userId,
+            userName: loggedInUser.userName,
+            userType: loggedInUser.userType,
+
             module: "Product",
             actionType: "PRODUCT_DELETE_FAILED",
             description: "Product deletion failed",

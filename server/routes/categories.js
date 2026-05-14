@@ -1,45 +1,22 @@
 const express = require('express');
 const router = express.Router();
 
-const jwt = require('jsonwebtoken');
-
 const { poolPromise } = require('../config/db');
 const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser');
 
 /* =================================================
-   GET LOGGED-IN USER FROM JWT
+   RESOLVE AUDIT USER (STANDARDIZED)
 ================================================= */
-function getLoggedInUser(req) {
+function resolveAuditUser(req, fallback = {}) {
 
-    try {
+    const jwtUser = getCurrentUser(req);
 
-        const authHeader = req.headers.authorization;
-
-        if (!authHeader) {
-            return null;
-        }
-
-        const token = authHeader.split(' ')[1];
-
-        if (!token) {
-            return null;
-        }
-
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
-
-        return {
-            userId: decoded.userId,
-            email: decoded.email,
-            role: decoded.role
-        };
-
-    } catch (err) {
-
-        return null;
-    }
+    return {
+        userId: jwtUser.userId || fallback.userId || null,
+        userName: jwtUser.userName || fallback.userName || "Guest",
+        userType: jwtUser.userType || fallback.userType || "Guest"
+    };
 }
 
 /* =================================================
@@ -47,24 +24,21 @@ function getLoggedInUser(req) {
 ================================================= */
 router.get('/', async (req, res) => {
 
-    const loggedInUser = getLoggedInUser(req);
+    const auditUser = resolveAuditUser(req);
 
     try {
 
         const pool = await poolPromise;
 
-        const result = await pool.request()
-            .query(`
-                SELECT *
-                FROM Categories
-                ORDER BY Name
-            `);
+        const result = await pool.request().query(`
+            SELECT *
+            FROM Categories
+            ORDER BY Name
+        `);
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_LIST",
@@ -82,9 +56,7 @@ router.get('/', async (req, res) => {
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_LIST_FAILED",
@@ -109,21 +81,18 @@ router.get('/', async (req, res) => {
 ================================================= */
 router.post('/', async (req, res) => {
 
-    const loggedInUser = getLoggedInUser(req);
+    const auditUser = resolveAuditUser(req);
 
     try {
 
         let { name } = req.body;
-
         name = name?.trim();
 
         if (!name) {
 
             await logAudit({
                 req,
-
-                userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+                ...auditUser,
 
                 module: "Category",
                 actionType: "CATEGORY_CREATE_FAILED",
@@ -140,7 +109,7 @@ router.post('/', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // DUPLICATE CHECK
+        // CHECK DUPLICATE
         const exists = await pool.request()
             .input('Name', name)
             .query(`
@@ -153,9 +122,7 @@ router.post('/', async (req, res) => {
 
             await logAudit({
                 req,
-
-                userId: loggedInUser?.userId || null,
-                userName: loggedInUser?.email || "Unknown",
+                ...auditUser,
 
                 module: "Category",
                 actionType: "CATEGORY_DUPLICATE",
@@ -184,9 +151,7 @@ router.post('/', async (req, res) => {
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_CREATED",
@@ -211,9 +176,7 @@ router.post('/', async (req, res) => {
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_CREATE_FAILED",
@@ -238,18 +201,16 @@ router.post('/', async (req, res) => {
 ================================================= */
 router.put('/:id', async (req, res) => {
 
-    const loggedInUser = getLoggedInUser(req);
+    const auditUser = resolveAuditUser(req);
 
     try {
 
         const id = req.params.id;
-
         let { name } = req.body;
 
         name = name?.trim();
 
         if (!name) {
-
             return res.status(400).json({
                 message: "Category name required"
             });
@@ -257,7 +218,7 @@ router.put('/:id', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // OLD CATEGORY
+        // GET OLD
         const oldCategory = await pool.request()
             .input('CategoryID', id)
             .query(`
@@ -267,7 +228,6 @@ router.put('/:id', async (req, res) => {
             `);
 
         if (!oldCategory.recordset.length) {
-
             return res.status(404).json({
                 message: "Category not found"
             });
@@ -287,15 +247,12 @@ router.put('/:id', async (req, res) => {
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_UPDATED",
 
-            description:
-                `Updated category from "${previous.Name}" to "${name}"`,
+            description: `Updated category from "${previous.Name}" to "${name}"`,
 
             oldValues: {
                 categoryName: previous.Name
@@ -319,9 +276,7 @@ router.put('/:id', async (req, res) => {
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_UPDATE_FAILED",
@@ -346,12 +301,11 @@ router.put('/:id', async (req, res) => {
 ================================================= */
 router.delete('/:id', async (req, res) => {
 
-    const loggedInUser = getLoggedInUser(req);
+    const auditUser = resolveAuditUser(req);
 
     try {
 
         const id = req.params.id;
-
         const pool = await poolPromise;
 
         // GET CATEGORY
@@ -364,7 +318,6 @@ router.delete('/:id', async (req, res) => {
             `);
 
         if (!categoryRes.recordset.length) {
-
             return res.status(404).json({
                 message: "Category not found"
             });
@@ -382,15 +335,12 @@ router.delete('/:id', async (req, res) => {
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_DELETED",
 
-            description:
-                `Deleted category "${category.Name}"`,
+            description: `Deleted category "${category.Name}"`,
 
             oldValues: {
                 categoryId: category.CategoryID,
@@ -411,9 +361,7 @@ router.delete('/:id', async (req, res) => {
 
         await logAudit({
             req,
-
-            userId: loggedInUser?.userId || null,
-            userName: loggedInUser?.email || "Unknown",
+            ...auditUser,
 
             module: "Category",
             actionType: "CATEGORY_DELETE_FAILED",

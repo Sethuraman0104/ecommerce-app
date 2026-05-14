@@ -5,6 +5,21 @@ const { poolPromise } = require("../config/db");
 const sql = require("mssql");
 
 const logAudit = require("../utils/auditLogger");
+const getCurrentUser = require("../utils/getCurrentUser");
+
+/* =================================================
+   AUDIT USER RESOLVER (GLOBAL SAFE)
+================================================= */
+function resolveAuditUser(req, fallback = {}) {
+
+    const user = getCurrentUser(req);
+
+    return {
+        userId: user.userId || fallback.userId || null,
+        userName: user.userName || fallback.userName || "Guest",
+        userType: user.userType || fallback.userType || "Guest"
+    };
+}
 
 /* =================================================
    GET ALL COUPONS
@@ -21,12 +36,9 @@ router.get("/", async (req, res) => {
             ORDER BY CouponID DESC
         `);
 
-        // AUDIT SUCCESS
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "System",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_LIST",
@@ -42,12 +54,9 @@ router.get("/", async (req, res) => {
 
         console.error("GET COUPONS ERROR:", err);
 
-        // AUDIT FAILURE
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "System",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_LIST_FAILED",
@@ -74,37 +83,24 @@ router.post("/", async (req, res) => {
 
     try {
 
-        const {
-            id,
-            code,
-            discount,
-            expiry
-        } = req.body;
+        const { id, code, discount, expiry } = req.body;
 
         const pool = await poolPromise;
 
-        // VALIDATION
         if (!code || !discount || !expiry) {
 
             await logAudit({
                 req,
-
-                userId: req.user?.userId || null,
-                userName: req.user?.name || "Unknown",
+                ...resolveAuditUser(req),
 
                 module: "Coupon",
                 actionType: "COUPON_SAVE_FAILED",
 
-                description:
-                    "Coupon save failed due to missing fields",
+                description: "Missing required fields",
 
                 status: "FAILED",
 
-                newValues: {
-                    code,
-                    discount,
-                    expiry
-                }
+                newValues: { code, discount, expiry }
             });
 
             return res.status(400).json({
@@ -112,13 +108,12 @@ router.post("/", async (req, res) => {
             });
         }
 
-        /* =========================================
+        /* =================================================
            UPDATE COUPON
-        ========================================= */
+        ================================================= */
         if (id) {
 
-            // GET OLD COUPON
-            const oldCouponRes = await pool.request()
+            const oldRes = await pool.request()
                 .input("id", sql.Int, id)
                 .query(`
                     SELECT *
@@ -126,19 +121,16 @@ router.post("/", async (req, res) => {
                     WHERE CouponID=@id
                 `);
 
-            if (!oldCouponRes.recordset.length) {
+            if (!oldRes.recordset.length) {
 
                 await logAudit({
                     req,
-
-                    userId: req.user?.userId || null,
-                    userName: req.user?.name || "Unknown",
+                    ...resolveAuditUser(req),
 
                     module: "Coupon",
                     actionType: "COUPON_UPDATE_FAILED",
 
-                    description:
-                        `Coupon not found for update ID=${id}`,
+                    description: `Coupon not found ID=${id}`,
 
                     status: "FAILED"
                 });
@@ -148,9 +140,8 @@ router.post("/", async (req, res) => {
                 });
             }
 
-            const oldCoupon = oldCouponRes.recordset[0];
+            const old = oldRes.recordset[0];
 
-            // UPDATE
             await pool.request()
                 .input("id", sql.Int, id)
                 .input("code", sql.NVarChar, code)
@@ -158,52 +149,33 @@ router.post("/", async (req, res) => {
                 .input("expiry", sql.DateTime, expiry)
                 .query(`
                     UPDATE Coupons
-                    SET
-                        Code=@code,
+                    SET Code=@code,
                         DiscountPercent=@discount,
                         ExpiryDate=@expiry
                     WHERE CouponID=@id
                 `);
 
-            // AUDIT UPDATE
             await logAudit({
                 req,
-
-                userId: req.user?.userId || null,
-                userName: req.user?.name || "Unknown",
+                ...resolveAuditUser(req),
 
                 module: "Coupon",
                 actionType: "COUPON_UPDATED",
 
-                description:
-                    `Updated coupon "${oldCoupon.Code}"`,
+                description: `Updated coupon "${old.Code}"`,
 
-                oldValues: {
-                    code: oldCoupon.Code,
-                    discount:
-                        oldCoupon.DiscountPercent,
-                    expiry:
-                        oldCoupon.ExpiryDate,
-                    isActive:
-                        oldCoupon.IsActive
-                },
-
-                newValues: {
-                    code,
-                    discount,
-                    expiry
-                },
+                oldValues: old,
+                newValues: { code, discount, expiry },
 
                 status: "SUCCESS"
             });
         }
 
-        /* =========================================
+        /* =================================================
            CREATE COUPON
-        ========================================= */
+        ================================================= */
         else {
 
-            // CHECK DUPLICATE
             const exists = await pool.request()
                 .input("code", sql.NVarChar, code)
                 .query(`
@@ -212,19 +184,16 @@ router.post("/", async (req, res) => {
                     WHERE LOWER(Code)=LOWER(@code)
                 `);
 
-            if (exists.recordset.length > 0) {
+            if (exists.recordset.length) {
 
                 await logAudit({
                     req,
-
-                    userId: req.user?.userId || null,
-                    userName: req.user?.name || "Unknown",
+                    ...resolveAuditUser(req),
 
                     module: "Coupon",
                     actionType: "COUPON_DUPLICATE",
 
-                    description:
-                        `Duplicate coupon creation attempted: ${code}`,
+                    description: `Duplicate coupon: ${code}`,
 
                     status: "FAILED"
                 });
@@ -234,44 +203,26 @@ router.post("/", async (req, res) => {
                 });
             }
 
-            // INSERT
             await pool.request()
                 .input("code", sql.NVarChar, code)
                 .input("discount", sql.Int, discount)
                 .input("expiry", sql.DateTime, expiry)
                 .query(`
                     INSERT INTO Coupons
-                    (
-                        Code,
-                        DiscountPercent,
-                        ExpiryDate
-                    )
-                    VALUES
-                    (
-                        @code,
-                        @discount,
-                        @expiry
-                    )
+                    (Code, DiscountPercent, ExpiryDate)
+                    VALUES (@code, @discount, @expiry)
                 `);
 
-            // AUDIT CREATE
             await logAudit({
                 req,
-
-                userId: req.user?.userId || null,
-                userName: req.user?.name || "Unknown",
+                ...resolveAuditUser(req),
 
                 module: "Coupon",
                 actionType: "COUPON_CREATED",
 
-                description:
-                    `Created coupon "${code}"`,
+                description: `Created coupon "${code}"`,
 
-                newValues: {
-                    code,
-                    discount,
-                    expiry
-                },
+                newValues: { code, discount, expiry },
 
                 status: "SUCCESS"
             });
@@ -286,18 +237,14 @@ router.post("/", async (req, res) => {
 
         console.error("SAVE COUPON ERROR:", err);
 
-        // AUDIT FAILURE
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_SAVE_FAILED",
 
-            description:
-                "Coupon save operation failed",
+            description: "Coupon save operation failed",
 
             status: "FAILED",
 
@@ -321,7 +268,6 @@ router.put("/:id/toggle", async (req, res) => {
 
         const pool = await poolPromise;
 
-        // GET EXISTING
         const couponRes = await pool.request()
             .input("id", sql.Int, req.params.id)
             .query(`
@@ -334,15 +280,12 @@ router.put("/:id/toggle", async (req, res) => {
 
             await logAudit({
                 req,
-
-                userId: req.user?.userId || null,
-                userName: req.user?.name || "Unknown",
+                ...resolveAuditUser(req),
 
                 module: "Coupon",
                 actionType: "COUPON_TOGGLE_FAILED",
 
-                description:
-                    `Coupon not found ID=${req.params.id}`,
+                description: `Coupon not found ID=${req.params.id}`,
 
                 status: "FAILED"
             });
@@ -354,46 +297,28 @@ router.put("/:id/toggle", async (req, res) => {
 
         const coupon = couponRes.recordset[0];
 
-        // TOGGLE
         await pool.request()
             .input("id", sql.Int, req.params.id)
             .query(`
                 UPDATE Coupons
                 SET IsActive =
-                    CASE
-                        WHEN IsActive = 1 THEN 0
-                        ELSE 1
-                    END
+                    CASE WHEN IsActive = 1 THEN 0 ELSE 1 END
                 WHERE CouponID=@id
             `);
 
-        const newStatus =
-            coupon.IsActive === true ||
-            coupon.IsActive === 1
-                ? "Inactive"
-                : "Active";
+        const newStatus = coupon.IsActive ? "Inactive" : "Active";
 
-        // AUDIT
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_STATUS_CHANGED",
 
-            description:
-                `Coupon "${coupon.Code}" changed to ${newStatus}`,
+            description: `Coupon "${coupon.Code}" changed to ${newStatus}`,
 
-            oldValues: {
-                isActive: coupon.IsActive
-            },
-
-            newValues: {
-                isActive:
-                    coupon.IsActive ? 0 : 1
-            },
+            oldValues: { isActive: coupon.IsActive },
+            newValues: { isActive: coupon.IsActive ? 0 : 1 },
 
             status: "SUCCESS"
         });
@@ -405,25 +330,20 @@ router.put("/:id/toggle", async (req, res) => {
 
     } catch (err) {
 
-        console.error("TOGGLE COUPON ERROR:", err);
+        console.error("TOGGLE ERROR:", err);
 
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_TOGGLE_FAILED",
 
-            description:
-                "Coupon toggle failed",
+            description: "Coupon toggle failed",
 
             status: "FAILED",
 
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
         res.status(500).json({
@@ -441,7 +361,6 @@ router.delete("/:id", async (req, res) => {
 
         const pool = await poolPromise;
 
-        // GET COUPON
         const couponRes = await pool.request()
             .input("id", sql.Int, req.params.id)
             .query(`
@@ -454,15 +373,12 @@ router.delete("/:id", async (req, res) => {
 
             await logAudit({
                 req,
-
-                userId: req.user?.userId || null,
-                userName: req.user?.name || "Unknown",
+                ...resolveAuditUser(req),
 
                 module: "Coupon",
                 actionType: "COUPON_DELETE_FAILED",
 
-                description:
-                    `Coupon not found ID=${req.params.id}`,
+                description: `Coupon not found ID=${req.params.id}`,
 
                 status: "FAILED"
             });
@@ -474,7 +390,6 @@ router.delete("/:id", async (req, res) => {
 
         const coupon = couponRes.recordset[0];
 
-        // DELETE
         await pool.request()
             .input("id", sql.Int, req.params.id)
             .query(`
@@ -482,27 +397,16 @@ router.delete("/:id", async (req, res) => {
                 WHERE CouponID=@id
             `);
 
-        // AUDIT
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_DELETED",
 
-            description:
-                `Deleted coupon "${coupon.Code}"`,
+            description: `Deleted coupon "${coupon.Code}"`,
 
-            oldValues: {
-                couponId: coupon.CouponID,
-                code: coupon.Code,
-                discount:
-                    coupon.DiscountPercent,
-                expiry:
-                    coupon.ExpiryDate
-            },
+            oldValues: coupon,
 
             status: "SUCCESS"
         });
@@ -514,25 +418,20 @@ router.delete("/:id", async (req, res) => {
 
     } catch (err) {
 
-        console.error("DELETE COUPON ERROR:", err);
+        console.error("DELETE ERROR:", err);
 
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_DELETE_FAILED",
 
-            description:
-                "Coupon deletion failed",
+            description: "Coupon deletion failed",
 
             status: "FAILED",
 
-            newValues: {
-                error: err.message
-            }
+            newValues: { error: err.message }
         });
 
         res.status(500).json({
@@ -550,6 +449,7 @@ router.get("/:id/usage", async (req, res) => {
 
         const pool = await poolPromise;
 
+        // GET COUPON INFO
         const couponRes = await pool.request()
             .input("CouponID", sql.Int, req.params.id)
             .query(`
@@ -558,88 +458,82 @@ router.get("/:id/usage", async (req, res) => {
                 WHERE CouponID=@CouponID
             `);
 
-        const coupon =
-            couponRes.recordset[0];
+        const coupon = couponRes.recordset[0];
 
+        // GET USAGE DATA
         const result = await pool.request()
             .input("CouponID", sql.Int, req.params.id)
             .query(`
+                SELECT 
+                    o.OrderID,
+                    o.TotalAmount,
+                    o.Status,
+                    o.CreatedAt,
 
-SELECT 
-    o.OrderID,
-    o.TotalAmount,
-    o.Status,
-    o.CreatedAt,
+                    o.SubTotal,
+                    o.DiscountAmount,
+                    o.VATPercent,
+                    o.VATAmount,
+                    o.AdditionalPercent,
+                    o.AdditionalAmount,
 
-    o.SubTotal,
-    o.DiscountAmount,
-    o.VATPercent,
-    o.VATAmount,
-    o.AdditionalPercent,
-    o.AdditionalAmount,
+                    c.FullName,
+                    c.Email,
 
-    c.FullName,
-    c.Email,
+                    p.PaymentStatus,
+                    p.PaymentMethod,
+                    p.TransactionID,
+                    p.PaidAt,
 
-    p.PaymentStatus,
-    p.PaymentMethod,
-    p.TransactionID,
-    p.PaidAt,
+                    Items.Items
 
-    Items.Items
+                FROM Orders o
 
-FROM Orders o
+                LEFT JOIN Customers c
+                    ON o.CustomerID = c.CustomerID
 
-LEFT JOIN Customers c
-    ON o.CustomerID = c.CustomerID
+                LEFT JOIN Payments p
+                    ON o.OrderID = p.OrderID
 
-LEFT JOIN Payments p
-    ON o.OrderID = p.OrderID
+                OUTER APPLY (
+                    SELECT (
+                        SELECT 
+                            oi.ProductID,
+                            pr.Name AS ProductName,
+                            oi.Quantity,
+                            oi.Price,
+                            (oi.Quantity * oi.Price) AS LineTotal
+                        FROM OrderItems oi
 
-OUTER APPLY (
-    SELECT (
-        SELECT 
-            oi.ProductID,
-            pr.Name AS ProductName,
-            oi.Quantity,
-            oi.Price,
-            (oi.Quantity * oi.Price) AS LineTotal
-        FROM OrderItems oi
+                        LEFT JOIN Products pr
+                            ON pr.ProductID = oi.ProductID
 
-        LEFT JOIN Products pr
-            ON pr.ProductID = oi.ProductID
+                        WHERE oi.OrderID = o.OrderID
 
-        WHERE oi.OrderID = o.OrderID
+                        FOR JSON PATH
+                    ) AS Items
+                ) Items
 
-        FOR JSON PATH
-    ) AS Items
-) Items
-
-WHERE o.CouponID = @CouponID
-ORDER BY o.CreatedAt DESC
-
+                WHERE o.CouponID = @CouponID
+                ORDER BY o.CreatedAt DESC
             `);
 
         const data = result.recordset.map(r => ({
             ...r,
-            Items:
-                r.Items
-                    ? JSON.parse(r.Items)
-                    : []
+            Items: r.Items ? JSON.parse(r.Items) : []
         }));
 
-        // AUDIT
+        /* =================================================
+           AUDIT SUCCESS
+        ================================================= */
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_USAGE_VIEW",
 
-            description:
-                `Viewed usage report for coupon "${coupon?.Code || req.params.id}"`,
+            description: `Viewed usage report for coupon "${coupon?.Code || req.params.id}"`,
 
             status: "SUCCESS"
         });
@@ -650,21 +544,22 @@ ORDER BY o.CreatedAt DESC
 
         console.error("COUPON USAGE ERROR:", err);
 
+        /* =================================================
+           AUDIT FAILURE
+        ================================================= */
         await logAudit({
             req,
-
-            userId: req.user?.userId || null,
-            userName: req.user?.name || "Unknown",
+            ...resolveAuditUser(req),
 
             module: "Coupon",
             actionType: "COUPON_USAGE_VIEW_FAILED",
 
-            description:
-                "Failed to load coupon usage report",
+            description: "Failed to load coupon usage report",
 
             status: "FAILED",
 
             newValues: {
+                couponId: req.params.id,
                 error: err.message
             }
         });

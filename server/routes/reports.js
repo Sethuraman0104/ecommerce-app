@@ -4,11 +4,9 @@ const router = express.Router();
 const sql = require('mssql');
 const { poolPromise } = require('../config/db');
 
-const logAudit = require('../utils/auditLogger'); // 👈 adjust path if needed
+const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser');
 
-/* =========================
-   IMPORT EXPORT LIBS
-========================= */
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
@@ -122,17 +120,17 @@ async function getReportData(type) {
 ========================= */
 router.get('/:type', async (req, res) => {
 
+    const currentUser = getCurrentUser(req);
+
     try {
 
         const result = await getReportData(req.params.type);
 
-        // =========================
-        // AUDIT: REPORT VIEW
-        // =========================
         await logAudit({
             req,
-            userId: req.user?.userId || null,
-            userName: req.user?.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
             module: "REPORTS",
             actionType: "VIEW",
             description: `Viewed report: ${req.params.type}`,
@@ -150,12 +148,16 @@ router.get('/:type', async (req, res) => {
 
         await logAudit({
             req,
-            userId: req.user?.userId || null,
-            userName: req.user?.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
             module: "REPORTS",
-            actionType: "VIEW",
+            actionType: "VIEW_FAILED",
             description: `Report view failed: ${req.params.type}`,
-            status: "FAILED"
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
         });
 
         res.status(500).json({
@@ -165,11 +167,12 @@ router.get('/:type', async (req, res) => {
     }
 });
 
-
 /* =========================
    EXCEL EXPORT (WITH AUDIT)
 ========================= */
 router.get('/export/excel/:type', async (req, res) => {
+
+    const currentUser = getCurrentUser(req);
 
     try {
 
@@ -192,8 +195,9 @@ router.get('/export/excel/:type', async (req, res) => {
 
         await logAudit({
             req,
-            userId: req.user?.userId || null,
-            userName: req.user?.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
             module: "REPORTS",
             actionType: "EXPORT_EXCEL",
             description: `Exported Excel report: ${req.params.type}`,
@@ -220,12 +224,16 @@ router.get('/export/excel/:type', async (req, res) => {
 
         await logAudit({
             req,
-            userId: req.user?.userId || null,
-            userName: req.user?.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
             module: "REPORTS",
-            actionType: "EXPORT_EXCEL",
+            actionType: "EXPORT_EXCEL_FAILED",
             description: `Excel export failed: ${req.params.type}`,
-            status: "FAILED"
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
         });
 
         res.status(500).json({
@@ -235,11 +243,12 @@ router.get('/export/excel/:type', async (req, res) => {
     }
 });
 
-
 /* =========================
    PDF EXPORT (WITH AUDIT)
 ========================= */
 router.get('/export/pdf/:type', async (req, res) => {
+
+    const currentUser = getCurrentUser(req);
 
     try {
 
@@ -250,8 +259,9 @@ router.get('/export/pdf/:type', async (req, res) => {
 
         await logAudit({
             req,
-            userId: req.user?.userId || null,
-            userName: req.user?.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
             module: "REPORTS",
             actionType: "EXPORT_PDF",
             description: `Exported PDF report: ${req.params.type}`,
@@ -279,7 +289,6 @@ router.get('/export/pdf/:type', async (req, res) => {
             const columns = Object.keys(data[0]);
 
             data.forEach(row => {
-
                 columns.forEach(col => {
                     doc.fontSize(10).text(`${col}: ${row[col]}`);
                 });
@@ -296,12 +305,16 @@ router.get('/export/pdf/:type', async (req, res) => {
 
         await logAudit({
             req,
-            userId: req.user?.userId || null,
-            userName: req.user?.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
             module: "REPORTS",
-            actionType: "EXPORT_PDF",
+            actionType: "EXPORT_PDF_FAILED",
             description: `PDF export failed: ${req.params.type}`,
-            status: "FAILED"
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
         });
 
         res.status(500).json({

@@ -464,3 +464,8 @@ CREATE TABLE AuditLogs (
 
     CreatedAt DATETIME DEFAULT GETDATE()
 );
+
+************* 14/05/2026 - In Office ***********************
+
+ALTER TABLE AuditLogs
+ADD UserType NVARCHAR(50) NULL;

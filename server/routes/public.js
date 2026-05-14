@@ -2,13 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { poolPromise } = require('../config/db');
 
-const logAudit = require('../utils/auditLogger'); // 👈 adjust path if needed
+const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser');
 
 // ==========================
 // GET COMPANY + SETTINGS
 // ==========================
 router.get('/app-info', async (req, res) => {
+
+    const currentUser = getCurrentUser(req); // 👈 unified user extractor
+
     try {
+
         const pool = await poolPromise;
 
         // =========================
@@ -22,6 +27,7 @@ router.get('/app-info', async (req, res) => {
         let company = {};
 
         if (companyRes.recordset.length > 0) {
+
             const row = companyRes.recordset[0];
 
             let logoBase64 = null;
@@ -52,19 +58,24 @@ router.get('/app-info', async (req, res) => {
         });
 
         // =========================
-        // AUDIT LOG (VIEW APP INFO)
+        // AUDIT LOG (SUCCESS)
         // =========================
         await logAudit({
             req,
-            userId: null, // public endpoint
-            userName: null,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
+
             module: "APP_INFO",
             actionType: "VIEW",
             description: "Public app info accessed",
+
             newValues: {
                 companyName: company?.Name || null,
                 settingsLoaded: Object.keys(settingsMap)
             },
+
             status: "SUCCESS"
         });
 
@@ -75,19 +86,27 @@ router.get('/app-info', async (req, res) => {
         });
 
     } catch (err) {
+
         console.error("APP INFO ERROR:", err);
 
         // =========================
-        // AUDIT FAILURE (NON-BLOCKING)
+        // AUDIT FAILURE
         // =========================
         await logAudit({
             req,
-            userId: null,
-            userName: null,
+
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Guest",
+            userType: currentUser?.userType || "Guest",
+
             module: "APP_INFO",
-            actionType: "VIEW",
+            actionType: "VIEW_FAILED",
             description: "App info fetch failed",
-            status: "FAILED"
+
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
         });
 
         res.status(500).json({ message: err.message });

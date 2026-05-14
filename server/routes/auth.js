@@ -7,6 +7,21 @@ const router = express.Router();
 
 const { poolPromise } = require('../config/db');
 const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser');
+
+/* =================================================
+   RESOLVE AUDIT USER (GLOBAL SAFE)
+================================================= */
+function resolveAuditUser(req, fallback = {}) {
+
+    const jwtUser = getCurrentUser(req);
+
+    return {
+        userId: jwtUser.userId || fallback.userId || null,
+        userName: jwtUser.userName || fallback.userName || "Guest",
+        userType: jwtUser.userType || fallback.userType || "Guest"
+    };
+}
 
 /* =================================================
    REGISTER USER
@@ -19,9 +34,6 @@ router.post('/register', async (req, res) => {
 
         const pool = await poolPromise;
 
-        /* =========================
-           CHECK EXISTING EMAIL
-        ========================= */
         const existing = await pool.request()
             .input('Email', email)
             .query(`
@@ -34,16 +46,14 @@ router.post('/register', async (req, res) => {
 
             await logAudit({
                 req,
+                ...resolveAuditUser(req),
 
                 module: "Auth",
                 actionType: "REGISTER_FAILED",
 
                 description: `Registration failed. Email already exists: ${email}`,
 
-                newValues: {
-                    name,
-                    email
-                },
+                newValues: { name, email },
 
                 status: "FAILED"
             });
@@ -54,14 +64,8 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        /* =========================
-           HASH PASSWORD
-        ========================= */
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        /* =========================
-           INSERT USER
-        ========================= */
         const insertResult = await pool.request()
             .input('Name', name)
             .input('Email', email)
@@ -92,24 +96,19 @@ router.post('/register', async (req, res) => {
 
         const userId = insertResult.recordset[0].UserID;
 
-        /* =========================
-           AUDIT LOG
-        ========================= */
         await logAudit({
             req,
+
             userId,
             userName: name,
+            userType: "User",
 
             module: "Auth",
             actionType: "REGISTER",
 
             description: `New user registered: ${email}`,
 
-            newValues: {
-                name,
-                email,
-                role: "User"
-            },
+            newValues: { name, email, role: "User" },
 
             status: "SUCCESS"
         });
@@ -125,15 +124,14 @@ router.post('/register', async (req, res) => {
 
         await logAudit({
             req,
+            ...resolveAuditUser(req),
 
             module: "Auth",
             actionType: "REGISTER_ERROR",
 
             description: err.message,
 
-            newValues: {
-                email: req.body?.email
-            },
+            newValues: { email: req.body?.email },
 
             status: "ERROR"
         });
@@ -153,12 +151,8 @@ router.post('/login', async (req, res) => {
     try {
 
         const pool = await poolPromise;
-
         const { email, password } = req.body;
 
-        /* =========================
-           FIND USER
-        ========================= */
         const result = await pool.request()
             .input('Email', email)
             .query(`
@@ -174,22 +168,18 @@ router.post('/login', async (req, res) => {
                 AND IsActive=1
             `);
 
-        /* =========================
-           USER NOT FOUND
-        ========================= */
         if (!result.recordset.length) {
 
             await logAudit({
                 req,
+                ...resolveAuditUser(req),
 
                 module: "Auth",
                 actionType: "LOGIN_FAILED",
 
                 description: `Failed login attempt for ${email}`,
 
-                newValues: {
-                    email
-                },
+                newValues: { email },
 
                 status: "FAILED"
             });
@@ -202,20 +192,16 @@ router.post('/login', async (req, res) => {
 
         const user = result.recordset[0];
 
-        /* =========================
-           CHECK PASSWORD
-        ========================= */
-        const valid = await bcrypt.compare(
-            password,
-            user.PasswordHash
-        );
+        const valid = await bcrypt.compare(password, user.PasswordHash);
 
         if (!valid) {
 
             await logAudit({
                 req,
+
                 userId: user.UserID,
                 userName: user.Name,
+                userType: user.RoleID === 1 ? "Admin" : "User",
 
                 module: "Auth",
                 actionType: "LOGIN_FAILED",
@@ -231,17 +217,8 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        /* =========================
-           ROLE
-        ========================= */
-        const role =
-            user.RoleID === 1
-                ? "Admin"
-                : "User";
+        const role = user.RoleID === 1 ? "Admin" : "User";
 
-        /* =========================
-           UPDATE LAST LOGIN
-        ========================= */
         await pool.request()
             .input('UserID', user.UserID)
             .query(`
@@ -252,9 +229,6 @@ router.post('/login', async (req, res) => {
                 WHERE UserID = @UserID
             `);
 
-        /* =========================
-           CREATE TOKEN
-        ========================= */
         const token = jwt.sign(
             {
                 userId: user.UserID,
@@ -262,28 +236,22 @@ router.post('/login', async (req, res) => {
                 email: user.Email
             },
             process.env.JWT_SECRET,
-            {
-                expiresIn: "1h"
-            }
+            { expiresIn: "1h" }
         );
 
-        /* =========================
-           AUDIT SUCCESS LOGIN
-        ========================= */
         await logAudit({
             req,
+
             userId: user.UserID,
             userName: user.Name,
+            userType: role,
 
             module: "Auth",
             actionType: "LOGIN_SUCCESS",
 
             description: `${user.Name} logged in successfully`,
 
-            newValues: {
-                email: user.Email,
-                role
-            },
+            newValues: { email: user.Email, role },
 
             status: "SUCCESS"
         });
@@ -305,6 +273,7 @@ router.post('/login', async (req, res) => {
 
         await logAudit({
             req,
+            ...resolveAuditUser(req),
 
             module: "Auth",
             actionType: "LOGIN_ERROR",
@@ -336,9 +305,7 @@ router.get('/currency', async (req, res) => {
             WHERE KeyName='Currency'
         `);
 
-        res.json(
-            result.recordset[0] || { Value: "$" }
-        );
+        res.json(result.recordset[0] || { Value: "$" });
 
     } catch (err) {
 
@@ -358,7 +325,6 @@ router.post('/forgot-password', async (req, res) => {
     try {
 
         const { email } = req.body;
-
         const pool = await poolPromise;
 
         const userRes = await pool.request()
@@ -369,22 +335,18 @@ router.post('/forgot-password', async (req, res) => {
                 WHERE Email=@Email
             `);
 
-        /* =========================
-           USER NOT FOUND
-        ========================= */
         if (!userRes.recordset.length) {
 
             await logAudit({
                 req,
+                ...resolveAuditUser(req),
 
                 module: "Auth",
                 actionType: "FORGOT_PASSWORD_UNKNOWN_EMAIL",
 
                 description: `Forgot password requested for non-existing email: ${email}`,
 
-                newValues: {
-                    email
-                },
+                newValues: { email },
 
                 status: "FAILED"
             });
@@ -397,22 +359,12 @@ router.post('/forgot-password', async (req, res) => {
 
         const user = userRes.recordset[0];
 
-        /* =========================
-           GENERATE TOKEN
-        ========================= */
-        const token =
-            crypto.randomBytes(32).toString('hex');
+        const token = crypto.randomBytes(32).toString('hex');
 
-        /* =========================
-           SAVE TOKEN
-        ========================= */
         await pool.request()
             .input('UserID', user.UserID)
             .input('Token', token)
-            .input(
-                'Expiry',
-                new Date(Date.now() + 3600000)
-            )
+            .input('Expiry', new Date(Date.now() + 3600000))
             .query(`
                 INSERT INTO PasswordResetTokens
                 (
@@ -428,17 +380,14 @@ router.post('/forgot-password', async (req, res) => {
                 )
             `);
 
-        console.log(
-            `Reset link: https://hrinfo-ecommerece.onrender.com/reset-password/${token}`
-        );
+        console.log(`Reset link: https://hrinfo-ecommerece.onrender.com/reset-password/${token}`);
 
-        /* =========================
-           AUDIT
-        ========================= */
         await logAudit({
             req,
+
             userId: user.UserID,
             userName: user.Name,
+            userType: "User",
 
             module: "Auth",
             actionType: "FORGOT_PASSWORD",
@@ -459,6 +408,7 @@ router.post('/forgot-password', async (req, res) => {
 
         await logAudit({
             req,
+            ...resolveAuditUser(req),
 
             module: "Auth",
             actionType: "FORGOT_PASSWORD_ERROR",
@@ -483,12 +433,8 @@ router.post('/reset-password', async (req, res) => {
     try {
 
         const { token, newPassword } = req.body;
-
         const pool = await poolPromise;
 
-        /* =========================
-           VALIDATE TOKEN
-        ========================= */
         const tokenRes = await pool.request()
             .input('Token', token)
             .query(`
@@ -498,13 +444,11 @@ router.post('/reset-password', async (req, res) => {
                 AND Expiry > GETDATE()
             `);
 
-        /* =========================
-           INVALID TOKEN
-        ========================= */
         if (!tokenRes.recordset.length) {
 
             await logAudit({
                 req,
+                ...resolveAuditUser(req),
 
                 module: "Auth",
                 actionType: "PASSWORD_RESET_FAILED",
@@ -520,12 +464,8 @@ router.post('/reset-password', async (req, res) => {
             });
         }
 
-        const userId =
-            tokenRes.recordset[0].UserID;
+        const userId = tokenRes.recordset[0].UserID;
 
-        /* =========================
-           GET OLD PASSWORD
-        ========================= */
         const oldUser = await pool.request()
             .input('UserID', userId)
             .query(`
@@ -534,29 +474,18 @@ router.post('/reset-password', async (req, res) => {
                 WHERE UserID=@UserID
             `);
 
-        /* =========================
-           HASH NEW PASSWORD
-        ========================= */
-        const hashed =
-            await bcrypt.hash(newPassword, 10);
+        const hashed = await bcrypt.hash(newPassword, 10);
 
-        /* =========================
-           UPDATE PASSWORD
-        ========================= */
         await pool.request()
             .input('UserID', userId)
             .input('PasswordHash', hashed)
             .query(`
                 UPDATE Users
-                SET
-                    PasswordHash=@PasswordHash,
+                SET PasswordHash=@PasswordHash,
                     UpdatedAt=GETDATE()
                 WHERE UserID=@UserID
             `);
 
-        /* =========================
-           REMOVE USED TOKEN
-        ========================= */
         await pool.request()
             .input('Token', token)
             .query(`
@@ -564,27 +493,20 @@ router.post('/reset-password', async (req, res) => {
                 WHERE Token=@Token
             `);
 
-        /* =========================
-           AUDIT
-        ========================= */
         await logAudit({
             req,
+
             userId,
+            userName: "User",
+            userType: "User",
 
             module: "Auth",
             actionType: "PASSWORD_RESET",
 
             description: "Password updated successfully",
 
-            oldValues: {
-                password: oldUser.recordset[0]?.PasswordHash
-                    ? "OLD_PASSWORD_EXISTS"
-                    : null
-            },
-
-            newValues: {
-                password: "PASSWORD_CHANGED"
-            },
+            oldValues: { password: "EXISTING" },
+            newValues: { password: "CHANGED" },
 
             status: "SUCCESS"
         });
@@ -600,6 +522,7 @@ router.post('/reset-password', async (req, res) => {
 
         await logAudit({
             req,
+            ...resolveAuditUser(req),
 
             module: "Auth",
             actionType: "RESET_PASSWORD_ERROR",

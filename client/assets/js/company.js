@@ -1,12 +1,33 @@
 const Company = {
 
+    // =========================
+    // GET AUTH HEADERS
+    // =========================
+    authHeaders() {
+        const token = localStorage.getItem("token");
+
+        return {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : ""
+        };
+    },
+
     init() {
         this.load();
     },
 
+    // =========================
+    // LOAD COMPANY
+    // =========================
     async load() {
+
         try {
-            const res = await fetch(`${CONFIG.API_BASE}/company`);
+
+            const res = await fetch(`${CONFIG.API_BASE}/company`, {
+                method: "GET",
+                headers: this.authHeaders()
+            });
+
             const data = await res.json();
 
             document.getElementById("cName").value = data.Name || "";
@@ -29,6 +50,9 @@ const Company = {
         }
     },
 
+    // =========================
+    // SAVE COMPANY
+    // =========================
     async save(e) {
 
         const btn = e.target;
@@ -59,7 +83,7 @@ const Company = {
 
             const res = await fetch(`${CONFIG.API_BASE}/company`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: this.authHeaders(),
                 body: JSON.stringify(payload)
             });
 
@@ -79,6 +103,9 @@ const Company = {
         btn.innerHTML = '<i class="fa fa-save"></i> Save Company';
     },
 
+    // =========================
+    // PREVIEW LOGO
+    // =========================
     preview(event) {
         const file = event.target.files[0];
         if (file) {
@@ -87,10 +114,13 @@ const Company = {
         }
     },
 
+    // =========================
+    // BASE64 CONVERT
+    // =========================
     getBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onload = () => resolve(reader.result.split(",")[1]);
             reader.onerror = reject;
             reader.readAsDataURL(file);
         });

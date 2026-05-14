@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const sql = require('mssql');
 const { poolPromise } = require('../config/db');
 
-const logAudit = require('../utils/auditLogger'); // 👈 adjust path if needed
+const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser');
 
 /* =========================
    AUTH MIDDLEWARE
@@ -18,8 +19,7 @@ function verifyToken(req, res, next) {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
         next();
     } catch {
         return res.status(401).json({ message: "Invalid token" });
@@ -30,6 +30,9 @@ function verifyToken(req, res, next) {
    GET PROFILE (AUDIT LOG)
 ========================= */
 router.get('/', verifyToken, async (req, res) => {
+
+    const currentUser = getCurrentUser(req);
+
     try {
 
         const pool = await poolPromise;
@@ -56,7 +59,6 @@ router.get('/', verifyToken, async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        /* Convert image */
         if (user.Photo && user.MimeType) {
             user.Photo =
                 `data:${user.MimeType};base64,${Buffer.from(user.Photo).toString('base64')}`;
@@ -67,8 +69,9 @@ router.get('/', verifyToken, async (req, res) => {
         // =========================
         await logAudit({
             req,
-            userId: req.user.userId,
-            userName: req.user.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Unknown",
+            userType: currentUser?.userType || "Unknown",
             module: "PROFILE",
             actionType: "VIEW",
             description: "User viewed profile",
@@ -81,7 +84,23 @@ router.get('/', verifyToken, async (req, res) => {
         res.json(user);
 
     } catch (err) {
+
         console.error(err);
+
+        await logAudit({
+            req,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Unknown",
+            userType: currentUser?.userType || "Unknown",
+            module: "PROFILE",
+            actionType: "VIEW_FAILED",
+            description: "Failed to view profile",
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
+        });
+
         res.status(500).json({ message: err.message });
     }
 });
@@ -91,6 +110,9 @@ router.get('/', verifyToken, async (req, res) => {
    UPDATE PROFILE (AUDIT LOG)
 ========================= */
 router.post('/', verifyToken, async (req, res) => {
+
+    const currentUser = getCurrentUser(req);
+
     try {
 
         const {
@@ -109,9 +131,7 @@ router.post('/', verifyToken, async (req, res) => {
             buffer = Buffer.from(photoBase64, 'base64');
         }
 
-        // =========================
-        // GET OLD VALUES (AUDIT)
-        // =========================
+        // OLD VALUES
         const oldResult = await pool.request()
             .input('UserID', sql.Int, req.user.userId)
             .query(`
@@ -122,9 +142,7 @@ router.post('/', verifyToken, async (req, res) => {
 
         const oldValues = oldResult.recordset[0];
 
-        // =========================
-        // UPDATE PROFILE
-        // =========================
+        // UPDATE
         await pool.request()
             .input('UserID', sql.Int, req.user.userId)
             .input('Name', sql.NVarChar, name)
@@ -145,16 +163,17 @@ router.post('/', verifyToken, async (req, res) => {
             `);
 
         // =========================
-        // AUDIT: PROFILE UPDATE
+        // AUDIT: SUCCESS
         // =========================
         await logAudit({
             req,
-            userId: req.user.userId,
-            userName: req.user.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Unknown",
+            userType: currentUser?.userType || "Unknown",
             module: "PROFILE",
             actionType: "UPDATE",
             description: "User updated profile",
-            oldValues: oldValues,
+            oldValues,
             newValues: {
                 Name: name,
                 Email: email,
@@ -167,19 +186,21 @@ router.post('/', verifyToken, async (req, res) => {
         res.json({ message: "Profile updated successfully" });
 
     } catch (err) {
+
         console.error(err);
 
-        // =========================
-        // AUDIT: FAILURE
-        // =========================
         await logAudit({
             req,
-            userId: req.user?.userId,
-            userName: req.user?.username || null,
+            userId: currentUser?.userId || null,
+            userName: currentUser?.userName || "Unknown",
+            userType: currentUser?.userType || "Unknown",
             module: "PROFILE",
-            actionType: "UPDATE",
+            actionType: "UPDATE_FAILED",
             description: "Profile update failed",
-            status: "FAILED"
+            status: "FAILED",
+            newValues: {
+                error: err.message
+            }
         });
 
         res.status(500).json({ message: err.message });

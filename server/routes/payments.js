@@ -4,10 +4,14 @@ const { poolPromise } = require('../config/db');
 const sql = require('mssql');
 const logAudit = require('../utils/auditLogger');
 
+const getCurrentUser = require('../utils/getCurrentUser');
+
 // =========================
 // GET PAYMENTS
 // =========================
 router.get('/', async (req, res) => {
+
+    const currentUser = getCurrentUser(req);
 
     try {
         const pool = await poolPromise;
@@ -43,6 +47,10 @@ router.get('/', async (req, res) => {
 
         await logAudit({
             req,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Payment",
             actionType: "PAYMENT_LIST_VIEW",
             description: "Viewed payments list",
@@ -59,6 +67,10 @@ router.get('/', async (req, res) => {
 
         await logAudit({
             req,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Payment",
             actionType: "PAYMENT_LIST_FAILED",
             description: "Failed to load payments list",
@@ -78,12 +90,18 @@ router.get('/', async (req, res) => {
 // =========================
 router.put('/:id/status', async (req, res) => {
 
+    const currentUser = getCurrentUser(req);
+
     const { status, remarks } = req.body;
 
     if (!status || !remarks) {
 
         await logAudit({
             req,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Payment",
             actionType: "PAYMENT_STATUS_UPDATE_INVALID",
             description: "Status update failed - missing fields",
@@ -125,6 +143,10 @@ router.put('/:id/status', async (req, res) => {
 
         await logAudit({
             req,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Payment",
             actionType: "PAYMENT_STATUS_UPDATED",
             description: `Payment status updated (PaymentID=${req.params.id})`,
@@ -144,6 +166,10 @@ router.put('/:id/status', async (req, res) => {
 
         await logAudit({
             req,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Payment",
             actionType: "PAYMENT_STATUS_UPDATE_FAILED",
             description: "Payment status update failed",
@@ -164,6 +190,8 @@ router.put('/:id/status', async (req, res) => {
 // =========================
 router.get('/:id/history', async (req, res) => {
 
+    const currentUser = getCurrentUser(req);
+
     try {
 
         const pool = await poolPromise;
@@ -179,6 +207,10 @@ router.get('/:id/history', async (req, res) => {
 
         await logAudit({
             req,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Payment",
             actionType: "PAYMENT_HISTORY_VIEW",
             description: `Viewed payment history (PaymentID=${req.params.id})`,
@@ -192,6 +224,10 @@ router.get('/:id/history', async (req, res) => {
 
         await logAudit({
             req,
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            userType: currentUser.userType,
+
             module: "Payment",
             actionType: "PAYMENT_HISTORY_FAILED",
             description: "Failed to load payment history",

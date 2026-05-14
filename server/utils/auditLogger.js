@@ -1,9 +1,12 @@
 const { poolPromise } = require('../config/db');
 
 async function logAudit({
+
     req,
+
     userId = null,
     userName = null,
+    userType = "Guest",
 
     module,
     actionType,
@@ -24,18 +27,25 @@ async function logAudit({
 
             .input("UserID", userId)
             .input("UserName", userName)
+            .input("UserType", userType)
 
             .input("Module", module)
             .input("ActionType", actionType)
 
             .input("Description", description)
 
-            .input("OldValues",
-                oldValues ? JSON.stringify(oldValues) : null
+            .input(
+                "OldValues",
+                oldValues
+                    ? JSON.stringify(oldValues)
+                    : null
             )
 
-            .input("NewValues",
-                newValues ? JSON.stringify(newValues) : null
+            .input(
+                "NewValues",
+                newValues
+                    ? JSON.stringify(newValues)
+                    : null
             )
 
             .input(
@@ -57,6 +67,7 @@ async function logAudit({
                 (
                     UserID,
                     UserName,
+                    UserType,
 
                     Module,
                     ActionType,
@@ -76,6 +87,7 @@ async function logAudit({
                 (
                     @UserID,
                     @UserName,
+                    @UserType,
 
                     @Module,
                     @ActionType,

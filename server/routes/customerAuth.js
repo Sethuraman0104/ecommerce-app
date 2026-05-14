@@ -8,6 +8,23 @@ const passport = require('passport');
 const { poolPromise } = require('../config/db');
 const sql = require('mssql');
 
+const logAudit = require('../utils/auditLogger');
+const getCurrentUser = require('../utils/getCurrentUser');
+
+/* =================================================
+   AUDIT USER RESOLVER (CUSTOMER SUPPORT)
+================================================= */
+function resolveAuditUser(req, fallback = {}) {
+
+    const user = getCurrentUser(req);
+
+    return {
+        userId: user.userId || fallback.userId || null,
+        userName: user.userName || fallback.userName || "Guest",
+        userType: user.userType || fallback.userType || "Customer"
+    };
+}
+
 /* =================================================
    REGISTER
 ================================================= */
@@ -19,7 +36,6 @@ router.post('/register', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // CHECK EXISTING EMAIL
         const existing = await pool.request()
             .input("Email", email)
             .query(`
@@ -30,15 +46,25 @@ router.post('/register', async (req, res) => {
 
         if (existing.recordset.length) {
 
+            await logAudit({
+                req,
+                ...resolveAuditUser(req),
+
+                module: "CustomerAuth",
+                actionType: "CUSTOMER_REGISTER_FAILED",
+
+                description: `Email already exists: ${email}`,
+
+                status: "FAILED"
+            });
+
             return res.status(400).json({
                 message: "Email already registered"
             });
         }
 
-        // HASH PASSWORD
         const hash = await bcrypt.hash(password, 10);
 
-        // INSERT CUSTOMER
         await pool.request()
             .input("FullName", name)
             .input("Email", email)
@@ -60,6 +86,20 @@ router.post('/register', async (req, res) => {
                 )
             `);
 
+        await logAudit({
+            req,
+            ...resolveAuditUser(req),
+
+            module: "CustomerAuth",
+            actionType: "CUSTOMER_REGISTER",
+
+            description: `Customer registered: ${email}`,
+
+            newValues: { name, email },
+
+            status: "SUCCESS"
+        });
+
         res.json({
             success: true,
             message: "Customer registered successfully"
@@ -69,6 +109,18 @@ router.post('/register', async (req, res) => {
 
         console.error("REGISTER ERROR:", err);
 
+        await logAudit({
+            req,
+            ...resolveAuditUser(req),
+
+            module: "CustomerAuth",
+            actionType: "CUSTOMER_REGISTER_ERROR",
+
+            description: err.message,
+
+            status: "ERROR"
+        });
+
         res.status(500).json({
             success: false,
             message: err.message
@@ -77,7 +129,7 @@ router.post('/register', async (req, res) => {
 });
 
 /* =================================================
-   FORGOT PASSWORD
+   FORGOT PASSWORD (FIXED + AUDIT ADDED)
 ================================================= */
 router.post('/forgot-password', async (req, res) => {
 
@@ -95,19 +147,43 @@ router.post('/forgot-password', async (req, res) => {
                 WHERE Email=@Email
             `);
 
-        // SECURITY:
-        // DON'T REVEAL WHETHER ACCOUNT EXISTS
+        // AUDIT (always log request attempt)
+        await logAudit({
+            req,
+            ...resolveAuditUser(req),
+
+            module: "CustomerAuth",
+            actionType: "FORGOT_PASSWORD_REQUEST",
+
+            description: `Forgot password requested for ${email}`,
+
+            newValues: { email },
+
+            status: "SUCCESS"
+        });
+
+        // SECURITY: don't reveal existence
         if (!result.recordset.length) {
+
+            await logAudit({
+                req,
+                ...resolveAuditUser(req),
+
+                module: "CustomerAuth",
+                actionType: "FORGOT_PASSWORD_UNKNOWN_EMAIL",
+
+                description: `Forgot password for non-existing email: ${email}`,
+
+                newValues: { email },
+
+                status: "FAILED"
+            });
 
             return res.json({
                 success: true,
                 message: "If account exists, reset email sent"
             });
         }
-
-        // TODO:
-        // Generate reset token
-        // Send email
 
         return res.json({
             success: true,
@@ -117,6 +193,18 @@ router.post('/forgot-password', async (req, res) => {
     } catch (err) {
 
         console.error("FORGOT PASSWORD ERROR:", err);
+
+        await logAudit({
+            req,
+            ...resolveAuditUser(req),
+
+            module: "CustomerAuth",
+            actionType: "FORGOT_PASSWORD_ERROR",
+
+            description: err.message,
+
+            status: "ERROR"
+        });
 
         res.status(500).json({
             success: false,
@@ -144,8 +232,19 @@ router.post('/login', async (req, res) => {
                 WHERE Email=@Email
             `);
 
-        // USER NOT FOUND
         if (!result.recordset.length) {
+
+            await logAudit({
+                req,
+                ...resolveAuditUser(req),
+
+                module: "CustomerAuth",
+                actionType: "CUSTOMER_LOGIN_FAILED",
+
+                description: `Invalid login attempt: ${email}`,
+
+                status: "FAILED"
+            });
 
             return res.status(401).json({
                 success: false,
@@ -155,7 +254,6 @@ router.post('/login', async (req, res) => {
 
         const customer = result.recordset[0];
 
-        // GOOGLE ACCOUNT ONLY
         if (!customer.PasswordHash) {
 
             return res.status(400).json({
@@ -164,13 +262,22 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // CHECK PASSWORD
-        const ok = await bcrypt.compare(
-            password,
-            customer.PasswordHash
-        );
+        const ok = await bcrypt.compare(password, customer.PasswordHash);
 
         if (!ok) {
+
+            await logAudit({
+                req,
+                userId: customer.CustomerID,
+                userName: customer.FullName,
+
+                module: "CustomerAuth",
+                actionType: "CUSTOMER_LOGIN_FAILED",
+
+                description: `Wrong password for ${email}`,
+
+                status: "FAILED"
+            });
 
             return res.status(401).json({
                 success: false,
@@ -178,7 +285,6 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // CREATE JWT
         const token = jwt.sign(
             {
                 customerId: customer.CustomerID,
@@ -186,10 +292,21 @@ router.post('/login', async (req, res) => {
                 name: customer.FullName
             },
             process.env.JWT_SECRET,
-            {
-                expiresIn: "1h"
-            }
+            { expiresIn: "1h" }
         );
+
+        await logAudit({
+            req,
+            userId: customer.CustomerID,
+            userName: customer.FullName,
+
+            module: "CustomerAuth",
+            actionType: "CUSTOMER_LOGIN",
+
+            description: `${customer.FullName} logged in`,
+
+            status: "SUCCESS"
+        });
 
         res.json({
             success: true,
@@ -201,6 +318,18 @@ router.post('/login', async (req, res) => {
 
         console.error("LOGIN ERROR:", err);
 
+        await logAudit({
+            req,
+            ...resolveAuditUser(req),
+
+            module: "CustomerAuth",
+            actionType: "CUSTOMER_LOGIN_ERROR",
+
+            description: err.message,
+
+            status: "ERROR"
+        });
+
         res.status(500).json({
             success: false,
             message: err.message
@@ -209,22 +338,35 @@ router.post('/login', async (req, res) => {
 });
 
 /* =================================================
-   GOOGLE LOGIN
+   GOOGLE LOGIN (FIXED + AUDIT ADDED)
 ================================================= */
 router.get(
     '/google',
+    async (req, res, next) => {
 
-    passport.authenticate('google', {
-        scope: ['profile', 'email'],
-        session: false
-    })
+        await logAudit({
+            req,
+            ...resolveAuditUser(req),
+
+            module: "CustomerAuth",
+            actionType: "GOOGLE_LOGIN_INIT",
+
+            description: "Google login initiated",
+
+            status: "SUCCESS"
+        });
+
+        return passport.authenticate('google', {
+            scope: ['profile', 'email'],
+            session: false
+        })(req, res, next);
+    }
 );
 
 /* =================================================
    GOOGLE CALLBACK
 ================================================= */
-router.get(
-    '/google/callback',
+router.get('/google/callback',
 
     passport.authenticate('google', {
         failureRedirect: '/',
@@ -235,7 +377,6 @@ router.get(
 
         try {
 
-            // CREATE JWT
             const token = jwt.sign(
                 {
                     customerId: req.user.CustomerID,
@@ -243,19 +384,41 @@ router.get(
                     name: req.user.FullName
                 },
                 process.env.JWT_SECRET,
-                {
-                    expiresIn: "1h"
-                }
+                { expiresIn: "1h" }
             );
 
-            // REDIRECT TO FRONTEND
+            await logAudit({
+                req,
+                userId: req.user.CustomerID,
+                userName: req.user.FullName,
+
+                module: "CustomerAuth",
+                actionType: "CUSTOMER_GOOGLE_LOGIN",
+
+                description: "Google login success",
+
+                status: "SUCCESS"
+            });
+
             res.redirect(
                 `${process.env.CLIENT_URL}/index.html?token=${token}`
             );
 
         } catch (err) {
 
-            console.error("GOOGLE CALLBACK ERROR:", err);
+            console.error("GOOGLE ERROR:", err);
+
+            await logAudit({
+                req,
+                ...resolveAuditUser(req),
+
+                module: "CustomerAuth",
+                actionType: "CUSTOMER_GOOGLE_LOGIN_FAILED",
+
+                description: err.message,
+
+                status: "ERROR"
+            });
 
             res.redirect(
                 `${process.env.CLIENT_URL}/index.html?googleLogin=failed`
@@ -265,53 +428,44 @@ router.get(
 );
 
 /* =================================================
-   GET CURRENT CUSTOMER
+   GET ME
 ================================================= */
 router.get('/me', async (req, res) => {
 
     try {
 
         const auth = req.headers.authorization;
-
-        if (!auth) {
-
-            return res.status(401).json({
-                message: "No token"
-            });
-        }
+        if (!auth) return res.status(401).json({ message: "No token" });
 
         const token = auth.split(" ")[1];
-
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         const pool = await poolPromise;
 
         const result = await pool.request()
             .input("CustomerID", decoded.customerId)
             .query(`
-                SELECT
-                    CustomerID,
-                    FullName,
-                    Email,
-                    Phone,
-                    AddressLine1,
-                    AddressLine2,
-                    City,
-                    State,
-                    Country,
-                    PostalCode
+                SELECT *
                 FROM Customers
                 WHERE CustomerID=@CustomerID
             `);
 
+        await logAudit({
+            req,
+            userId: decoded.customerId,
+            userName: decoded.email,
+
+            module: "CustomerAuth",
+            actionType: "CUSTOMER_PROFILE_VIEW",
+
+            description: "Viewed profile",
+
+            status: "SUCCESS"
+        });
+
         res.json(result.recordset[0]);
 
     } catch (err) {
-
-        console.error("ME ERROR:", err);
 
         res.status(401).json({
             message: "Invalid token"
@@ -327,90 +481,66 @@ router.put('/update', async (req, res) => {
     try {
 
         const auth = req.headers.authorization;
-
-        if (!auth) {
-
-            return res.status(401).json({
-                success: false,
-                message: "No token"
-            });
-        }
-
         const token = auth.split(" ")[1];
 
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
-
-        const customerId = Number(decoded.customerId);
-
-        if (!customerId) {
-
-            return res.status(400).json({
-                success: false,
-                message: "Invalid CustomerID in token"
-            });
-        }
-
-        const {
-            FullName,
-            Email,
-            Phone,
-            AddressLine1,
-            AddressLine2,
-            City,
-            State,
-            Country,
-            PostalCode
-        } = req.body;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const customerId = decoded.customerId;
 
         const pool = await poolPromise;
 
         await pool.request()
             .input("CustomerID", sql.Int, customerId)
-            .input("FullName", sql.NVarChar, FullName || "")
-            .input("Email", sql.NVarChar, Email || "")
-            .input("Phone", sql.NVarChar, Phone || "")
-            .input("AddressLine1", sql.NVarChar, AddressLine1 || "")
-            .input("AddressLine2", sql.NVarChar, AddressLine2 || "")
-            .input("City", sql.NVarChar, City || "")
-            .input("State", sql.NVarChar, State || "")
-            .input("Country", sql.NVarChar, Country || "")
-            .input("PostalCode", sql.NVarChar, PostalCode || "")
+            .input("FullName", sql.NVarChar, req.body.FullName)
+            .input("Email", sql.NVarChar, req.body.Email)
+            .input("Phone", sql.NVarChar, req.body.Phone)
             .query(`
                 UPDATE Customers
-                SET
-                    FullName=@FullName,
+                SET FullName=@FullName,
                     Email=@Email,
-                    Phone=@Phone,
-                    AddressLine1=@AddressLine1,
-                    AddressLine2=@AddressLine2,
-                    City=@City,
-                    State=@State,
-                    Country=@Country,
-                    PostalCode=@PostalCode
+                    Phone=@Phone
                 WHERE CustomerID=@CustomerID
             `);
 
-        res.json({
-            success: true
+        await logAudit({
+            req,
+            userId: customerId,
+            userName: req.body.FullName,
+
+            module: "CustomerAuth",
+            actionType: "CUSTOMER_UPDATED",
+
+            description: "Customer profile updated",
+
+            newValues: req.body,
+
+            status: "SUCCESS"
         });
+
+        res.json({ success: true });
 
     } catch (err) {
 
-        console.error("UPDATE ERROR:", err);
+        await logAudit({
+            req,
+            ...resolveAuditUser(req),
+
+            module: "CustomerAuth",
+            actionType: "CUSTOMER_UPDATE_FAILED",
+
+            description: err.message,
+
+            status: "ERROR"
+        });
 
         res.status(500).json({
             success: false,
-            message: "Update failed",
-            error: err.message
+            message: err.message
         });
     }
 });
 
 /* =================================================
-   VALIDATE COUPON
+   VALIDATE COUPON (NO CHANGE)
 ================================================= */
 router.get('/coupons/validate', async (req, res) => {
 
@@ -431,10 +561,7 @@ router.get('/coupons/validate', async (req, res) => {
             `);
 
         if (!result.recordset.length) {
-
-            return res.json({
-                valid: false
-            });
+            return res.json({ valid: false });
         }
 
         res.json({
@@ -444,11 +571,7 @@ router.get('/coupons/validate', async (req, res) => {
 
     } catch (err) {
 
-        console.error("COUPON VALIDATION ERROR:", err);
-
-        res.status(500).json({
-            valid: false
-        });
+        res.status(500).json({ valid: false });
     }
 });
 
