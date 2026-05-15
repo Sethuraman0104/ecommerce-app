@@ -98,17 +98,25 @@ async function getReportData(type) {
             `);
 
         case "audit-logs":
-            return await pool.request().query(`
-                SELECT TOP 100
-                    A.LogID,
-                    A.ActionType,
-                    A.Module,
-                    U.Name AS UserName,
-                    A.CreatedAt
-                FROM AuditLogs A
-                LEFT JOIN Users U ON A.UserID = U.UserID
-                ORDER BY A.CreatedAt DESC
-            `);
+    return await pool.request().query(`
+        SELECT 
+            A.LogID,
+            A.UserID,
+            ISNULL(U.Name, A.UserName) AS UserName,
+            A.UserType,
+            A.Module,
+            A.ActionType,
+            A.Description,
+            A.OldValues,
+            A.NewValues,
+            A.IPAddress,
+            A.UserAgent,
+            A.Status,
+            A.CreatedAt
+        FROM AuditLogs A
+        LEFT JOIN Users U ON A.UserID = U.UserID
+        ORDER BY A.CreatedAt DESC
+    `);
 
         default:
             throw new Error("Invalid report type");

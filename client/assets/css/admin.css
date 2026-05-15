@@ -3937,14 +3937,17 @@ table {
 }
 
 .action-btn.excel {
+  background-color: #cbd5e1;
   color: #16a34a;
 }
 
 .action-btn.pdf {
+  background-color: #cbd5e1;
   color: #dc2626;
 }
 
 .action-btn.close {
+  background-color: #dc2626;
   color: #111827;
 }
 
@@ -4065,4 +4068,139 @@ table {
   #modalSearch {
     font-size: 13px;
   }
+}
+
+/* =========================
+   AUDIT LOGS
+========================= */
+
+.audit-main-row td{
+    background:#fff;
+    vertical-align:middle;
+}
+
+.audit-expand-btn{
+    width:34px;
+    height:34px;
+    border:none;
+    border-radius:10px;
+    background:#f1f5f9;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.audit-expand-btn:hover{
+    background:#e2e8f0;
+    transform:scale(1.05);
+}
+
+.audit-user{
+    display:flex;
+    flex-direction:column;
+}
+
+.audit-user strong{
+    font-size:14px;
+    color:#0f172a;
+}
+
+.audit-user small{
+    color:#64748b;
+    font-size:12px;
+}
+
+.audit-module{
+    background:#eff6ff;
+    color:#2563eb;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+}
+
+.audit-action{
+    background:#f8fafc;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+}
+
+.audit-status{
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+}
+
+.audit-status.success{
+    background:#dcfce7;
+    color:#15803d;
+}
+
+.audit-status.failed{
+    background:#fee2e2;
+    color:#dc2626;
+}
+
+.audit-expand-row td{
+    background:#f8fafc;
+    padding:0;
+    border-top:none;
+}
+
+.audit-details{
+    padding:20px;
+}
+
+.audit-detail-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:18px;
+}
+
+.audit-box{
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    padding:16px;
+}
+
+.audit-box label{
+    display:block;
+    margin-bottom:10px;
+    font-size:13px;
+    font-weight:700;
+    color:#334155;
+}
+
+.audit-box pre{
+    margin:0;
+    white-space:pre-wrap;
+    word-break:break-word;
+    font-size:12px;
+    line-height:1.6;
+    color:#0f172a;
+    font-family:Consolas, monospace;
+}
+
+.hidden{
+    display:none;
+}
+
+/* MOBILE */
+
+@media(max-width:768px){
+
+    .audit-detail-grid{
+        grid-template-columns:1fr;
+    }
+
+    .audit-box{
+        padding:14px;
+    }
+
+    .audit-box pre{
+        font-size:11px;
+    }
 }
